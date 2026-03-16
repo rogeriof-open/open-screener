@@ -474,7 +474,7 @@ tr:hover .cnpj-actions{opacity:1}
 </style>
 </head>
 <body>
-<div id="login-screen">
+<div id="login-screen" style="display:none">
   <div class="login-box">
     <div class="login-logo">
       <div class="logo-mark">
@@ -848,7 +848,7 @@ async function initAuth(){
     return;
   }
 
-  // Consultores version — check session
+  // Check existing session
   const { data: { session } } = await supa.auth.getSession();
   if(session?.user){
     currentUser = session.user;
@@ -856,7 +856,7 @@ async function initAuth(){
     document.getElementById('login-screen').style.display = 'none';
     showApp();
   } else {
-    // Hide app content, show login
+    // Show login only for consultores
     document.getElementById('login-screen').style.display = 'flex';
   }
 }

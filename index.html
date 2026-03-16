@@ -574,16 +574,16 @@ tr:hover .cnpj-actions{opacity:1}
     <!-- BTG: CDI YTD box -->
     <div class="cdi-box" id="cdi-ytd-box">
       <span class="fl">CDI Acumulado Ano (%)</span>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:5px">Para calcular % CDI Ano</div>
-      <input class="finp" id="inp-cdi-ytd" type="number" step="0.01" placeholder="ex: 2.10"
+      <div style="font-size:10px;color:var(--text3);margin-bottom:5px">Preenchido automaticamente via Banco Central</div>
+      <input class="finp" id="inp-cdi-ytd" type="number" step="0.01" placeholder="Carregando..."
         oninput="st().cdiYtd=parseFloat(this.value)||null;render()">
     </div>
 
     <!-- XP: CDI 12M reference box -->
     <div class="cdi-box" id="cdi-12m-xp-box" style="display:none">
       <span class="fl" style="color:#74aeff">CDI Acumulado 12M (%)</span>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:5px">Para calcular % CDI 12M</div>
-      <input class="finp" id="inp-cdi-12m-ref" type="number" step="0.01" placeholder="ex: 13.25"
+      <div style="font-size:10px;color:var(--text3);margin-bottom:5px">Preenchido automaticamente via Banco Central</div>
+      <input class="finp" id="inp-cdi-12m-ref" type="number" step="0.01" placeholder="Carregando..."
         oninput="st().cdi12mRef=parseFloat(this.value)||null;render()">
     </div>
 
@@ -1011,6 +1011,8 @@ function showScreener(){
   showPropostaBtn();
   initSidebar();
   render();
+  // Auto-fetch CDI from BCB
+  fetchCDI();
 }
 
 function reloadCurrentTab(){
@@ -2090,7 +2092,57 @@ function unique(arr){ return [...new Set(arr.filter(Boolean))]; }
 function esc(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
 // ══════════════════════════════════════════════
-// EXPORT — bake data into HTML for sharing
+// AUTO CDI — busca dados reais do Banco Central
+// ══════════════════════════════════════════════
+async function fetchCDI(){
+  try {
+    const hoje = new Date();
+    const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+
+    // Data início do ano
+    const inicioAno = new Date(hoje.getFullYear(), 0, 1);
+    // Data 12 meses atrás
+    const inicio12m = new Date(hoje);
+    inicio12m.setFullYear(inicio12m.getFullYear() - 1);
+
+    // Série 12 = CDI diário (% a.d.)
+    const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${fmt(inicio12m)}&dataFinal=${fmt(hoje)}`;
+    const res = await fetch(url);
+    if(!res.ok) return;
+    const data = await res.json();
+    if(!data?.length) return;
+
+    // Calcular CDI acumulado: produto dos fatores diários
+    const acumular = (registros) => {
+      return registros.reduce((acc, r) => acc * (1 + parseFloat(r.valor)/100), 1);
+    };
+
+    // Separar registros do ano vs últimos 12M
+    const anoAtual = hoje.getFullYear();
+    const doAno  = data.filter(r => r.data.endsWith(String(anoAtual)));
+    const de12m  = data; // todos = últimos 12M
+
+    const cdiYtd = (acumular(doAno) - 1) * 100;
+    const cdi12m = (acumular(de12m) - 1) * 100;
+
+    // Preencher campos se ainda estiverem vazios
+    ['btg','xp'].forEach(tab => {
+      if(!states[tab].cdiYtd)    states[tab].cdiYtd    = +cdiYtd.toFixed(4);
+      if(!states[tab].cdi12mRef) states[tab].cdi12mRef = +cdi12m.toFixed(4);
+    });
+
+    // Atualizar campos visuais
+    const ytdEl = document.getElementById('inp-cdi-ytd');
+    const m12El = document.getElementById('inp-cdi-12m-ref');
+    if(ytdEl && !ytdEl.value) ytdEl.value = cdiYtd.toFixed(2);
+    if(m12El && !m12El.value) m12El.value = cdi12m.toFixed(2);
+
+    console.log(`CDI YTD: ${cdiYtd.toFixed(2)}% | CDI 12M: ${cdi12m.toFixed(2)}%`);
+    render();
+  } catch(e) {
+    console.warn('CDI auto-fetch falhou:', e.message);
+  }
+}
 // ══════════════════════════════════════════════
 function exportShared(){
   const btn = document.getElementById('btn-export');

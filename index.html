@@ -1,0 +1,2186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fund Screener · OpenAdvisor</title>
+<script>
+// Skip auth on open-screener, localhost, or file protocol
+if(window.location.hostname.includes('open-screener') || 
+   window.location.protocol === 'file:' ||
+   window.location.hostname === 'localhost'){
+  window.__SKIP_AUTH__ = true;
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070d1a;--bg2:#0c1525;--bg3:#111f35;
+  --border:#182840;--border2:#1e3354;
+  --teal:#00c896;--teal2:#00a87d;--teal-dim:rgba(0,200,150,.08);
+  --red:#f04d5a;--amber:#f5a623;
+  --text:#dde5f0;--text2:#7d97b5;--text3:#45607a;
+  --btg:#4a9eff;--xp:#ff6830;
+  --sidebar:208px;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px}
+
+/* ════ TOPBAR ════ */
+.topbar{
+  height:46px;border-bottom:1px solid var(--border);display:flex;align-items:center;
+  padding:0 14px;gap:10px;background:var(--bg);flex-shrink:0;position:relative;z-index:20;
+}
+.logo{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:700;letter-spacing:-.3px;text-decoration:none;color:var(--text)}
+.logo-mark{width:24px;height:24px;background:linear-gradient(135deg,var(--teal),var(--teal2));border-radius:5px;display:flex;align-items:center;justify-content:center}
+.logo-mark svg{width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2.5}
+.logo em{color:var(--teal);font-style:normal}
+.sep{width:1px;height:18px;background:var(--border2)}
+
+/* Tabs in topbar */
+.tabs{display:flex;gap:0;margin-left:4px}
+.tab{
+  padding:0 16px;height:46px;display:flex;align-items:center;gap:7px;
+  font-size:12px;font-weight:600;letter-spacing:.2px;cursor:pointer;
+  border-bottom:2px solid transparent;color:var(--text3);transition:all .15s;
+  position:relative;
+}
+.tab:hover{color:var(--text2)}
+.tab.active-btg{color:var(--btg);border-bottom-color:var(--btg)}
+.tab.active-xp{color:var(--xp);border-bottom-color:var(--xp)}
+.tab-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.7}
+.tab-count{
+  font-size:10px;font-family:var(--mono);padding:1px 5px;border-radius:8px;
+  background:rgba(255,255,255,.07);font-weight:500;
+}
+
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:6px}
+.btn-sm{
+  padding:4px 10px;border-radius:6px;border:1px solid var(--border2);
+  background:transparent;color:var(--text3);font-family:var(--font);font-size:11px;
+  cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;
+}
+.btn-sm:hover{border-color:var(--teal);color:var(--teal)}
+.btn-export{border-color:rgba(0,200,150,.3);color:var(--teal)}
+.btn-export:hover{background:var(--teal-dim);border-color:var(--teal)}
+
+/* ════ LAYOUT ════ */
+#app{display:flex;flex-direction:column;height:100vh}
+.main{display:flex;flex:1;overflow:hidden}
+
+/* ════ UPLOAD PANEL ════ */
+.upload-panel{
+  flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;
+  padding:40px 20px;
+}
+.upload-hero{text-align:center;margin-bottom:36px}
+.upload-hero h2{font-size:22px;font-weight:700;letter-spacing:-.4px;margin-bottom:8px}
+.upload-hero p{color:var(--text2);font-size:13px}
+.upload-box{
+  width:100%;max-width:420px;border:1.5px dashed var(--border2);border-radius:16px;
+  padding:36px 28px;text-align:center;cursor:pointer;transition:all .2s;
+  background:var(--bg2);
+}
+.upload-box:hover,.upload-box.drag-over{border-color:var(--teal);background:var(--teal-dim)}
+.upload-icon{
+  width:52px;height:52px;border-radius:12px;margin:0 auto 16px;
+  display:flex;align-items:center;justify-content:center;
+}
+.upload-icon-btg{background:rgba(74,158,255,.12)}
+.upload-icon-xp{background:rgba(255,104,48,.12)}
+.upload-icon svg{width:26px;height:26px;fill:none;stroke-width:1.8}
+.upload-icon-btg svg{stroke:var(--btg)}
+.upload-icon-xp svg{stroke:var(--xp)}
+.upload-box h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.upload-box p{color:var(--text2);font-size:12px;margin-bottom:20px;line-height:1.6}
+.upload-cta{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 18px;
+  border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;
+  font-family:var(--font);transition:all .2s;
+}
+.cta-btg{background:rgba(74,158,255,.15);color:var(--btg)}
+.cta-btg:hover{background:rgba(74,158,255,.25)}
+.cta-xp{background:rgba(255,104,48,.15);color:var(--xp)}
+.cta-xp:hover{background:rgba(255,104,48,.25)}
+.upload-note{margin-top:12px;font-size:11px;color:var(--text3)}
+input[type=file]{display:none}
+
+/* ════ SIDEBAR ════ */
+.sidebar{
+  width:var(--sidebar);flex-shrink:0;border-right:1px solid var(--border);
+  overflow-y:auto;padding:10px 10px 20px;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+  transition:width .25s ease, padding .25s ease, opacity .2s ease;
+}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border)}
+.sidebar.collapsed{width:0 !important;padding:0 !important;overflow:hidden;border-right:none;opacity:0}
+
+/* Toggle button — slim vertical bar between sidebar and content */
+#btn-sidebar-toggle{
+  width:16px;flex-shrink:0;
+  background:var(--bg2);
+  border:none;border-right:1px solid var(--border);border-left:1px solid var(--border);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text2);
+  transition:background .15s, color .15s;
+  padding:0;
+  position:relative;
+}
+#btn-sidebar-toggle:hover{background:var(--bg3);color:var(--teal)}
+
+/* Arrow icon centered vertically */
+#btn-sidebar-toggle::after{
+  content:'';
+  display:block;
+  width:16px;height:40px;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:4px;
+  position:absolute;
+  top:50%;transform:translateY(-50%);
+  left:-1px;
+}
+#btn-sidebar-toggle::before{
+  content:'‹';
+  font-size:14px;
+  font-weight:700;
+  position:relative;
+  z-index:1;
+  color:var(--text2);
+  line-height:1;
+}
+#btn-sidebar-toggle:hover::after{background:var(--teal-dim);border-color:var(--teal)}
+#btn-sidebar-toggle:hover::before{color:var(--teal)}
+#btn-sidebar-toggle.collapsed::before{content:'›'}
+
+.fs{margin-bottom:12px}
+.fl{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:5px;display:block}
+
+.chips{display:flex;flex-wrap:wrap;gap:3px}
+.chip{
+  padding:3px 7px;border-radius:5px;border:1px solid var(--border2);
+  background:transparent;color:var(--text2);font-family:var(--font);font-size:10px;
+  cursor:pointer;transition:all .12s;white-space:nowrap;
+}
+.chip:hover{border-color:var(--teal);color:var(--teal)}
+.chip.on{background:var(--teal-dim);border-color:var(--teal);color:var(--teal)}
+.chip.all.on{background:rgba(255,255,255,.05);border-color:var(--border2);color:var(--text)}
+
+select.fsel{
+  width:100%;padding:5px 24px 5px 7px;border-radius:7px;border:1px solid var(--border2);
+  background:var(--bg3);color:var(--text);font-family:var(--font);font-size:11px;
+  cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5 4.5-5z' fill='%2345607a'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 7px center;
+}
+.finp{
+  width:100%;padding:4px 7px;border-radius:7px;border:1px solid var(--border2);
+  background:var(--bg3);color:var(--text);font-family:var(--mono);font-size:11px;text-align:right;
+}
+.finp:focus{outline:none;border-color:var(--teal)}
+.finp::placeholder{color:var(--text3)}
+.irow{display:flex;gap:4px;align-items:center;margin-top:3px}
+.irow label{font-size:10px;color:var(--text3);white-space:nowrap;min-width:26px}
+
+/* range */
+input[type=range]{width:100%;accent-color:var(--teal);cursor:pointer}
+.rval{font-size:11px;color:var(--teal);font-family:var(--mono);float:right;margin-top:-1px}
+
+/* toggle */
+.tog-row{display:flex;align-items:center;gap:7px}
+.tog{position:relative;width:30px;height:16px}
+.tog input{opacity:0;width:0;height:0}
+.tslider{position:absolute;inset:0;border-radius:16px;background:var(--border2);cursor:pointer;transition:.2s}
+.tslider::before{content:'';position:absolute;width:10px;height:10px;left:3px;top:3px;border-radius:50%;background:var(--text3);transition:.2s}
+.tog input:checked+.tslider{background:var(--teal)}
+.tog input:checked+.tslider::before{transform:translateX(14px);background:#fff}
+.tlab{font-size:11px;color:var(--text2)}
+
+/* CDI box */
+.cdi-box{
+  background:rgba(0,200,150,.05);border:1px solid rgba(0,200,150,.2);
+  border-radius:9px;padding:8px 9px;margin-bottom:12px;
+}
+.cdi-box .fl{color:var(--teal)}
+
+.btn-reset{
+  width:100%;margin-top:6px;padding:7px;border-radius:7px;
+  border:1px solid var(--border2);background:transparent;
+  color:var(--text2);font-family:var(--font);font-size:11px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s;
+}
+.btn-reset:hover{border-color:var(--red);color:var(--red)}
+
+/* ════ CONTENT ════ */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.statsbar{
+  padding:9px 14px;border-bottom:1px solid var(--border);
+  display:flex;gap:20px;flex-wrap:wrap;flex-shrink:0;
+}
+.stat-v{font-size:17px;font-weight:700;font-family:var(--mono);letter-spacing:-1px}
+.stat-l{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3)}
+.toolbar{
+  padding:7px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+}
+.srch-wrap{position:relative;flex:1;max-width:260px}
+.srch-wrap svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:12px;height:12px;stroke:var(--text3);fill:none}
+.srch{
+  width:100%;padding:5px 7px 5px 26px;border-radius:7px;
+  border:1px solid var(--border2);background:var(--bg2);
+  color:var(--text);font-family:var(--font);font-size:11px;
+}
+.srch:focus{outline:none;border-color:var(--teal)}
+.srch::placeholder{color:var(--text3)}
+.perpage{
+  padding:4px 7px;border-radius:6px;border:1px solid var(--border2);
+  background:var(--bg2);color:var(--text2);font-family:var(--font);font-size:11px;
+}
+.tright{margin-left:auto;display:flex;align-items:center;gap:7px}
+
+.tbl-wrap{flex:1;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.tbl-wrap::-webkit-scrollbar{width:5px;height:5px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--border)}
+
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+thead{position:sticky;top:0;z-index:10}
+th{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:7px 9px;text-align:left;white-space:nowrap;
+  color:var(--text3);font-weight:600;font-size:9.5px;letter-spacing:.4px;text-transform:uppercase;
+  cursor:pointer;user-select:none;
+}
+th:hover{color:var(--text2)}
+th.sorted{color:var(--teal)}
+.sarr{margin-left:3px;opacity:.4;font-size:9px}
+th.sorted .sarr{opacity:1}
+td{padding:6px 9px;border-bottom:1px solid rgba(24,40,64,.6);white-space:nowrap;vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.018)}
+tr:last-child td{border-bottom:none}
+
+.fname{max-width:190px;overflow:hidden;text-overflow:ellipsis;font-weight:500;color:var(--text)}
+.fname[title]:hover{color:var(--teal);cursor:default}
+
+.badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:9.5px;font-weight:600;letter-spacing:.1px}
+.b-rv{background:rgba(240,77,90,.1);color:#f07080}
+.b-rf{background:rgba(74,158,255,.1);color:#74aeff}
+.b-mm{background:rgba(245,166,35,.1);color:#f5b040}
+.b-alt{background:rgba(170,100,220,.1);color:#bb80e8}
+.b-aloc{background:rgba(0,200,150,.1);color:var(--teal)}
+.b-camb{background:rgba(80,200,255,.1);color:#60d0ff}
+.b-out{background:rgba(100,120,150,.1);color:#889aaa}
+.s-sof{background:rgba(170,100,220,.1);color:#bb80e8}
+.s-mod{background:rgba(245,166,35,.1);color:#f5b040}
+.s-con{background:rgba(0,200,150,.1);color:var(--teal)}
+.s-qual{background:rgba(74,158,255,.1);color:#74aeff}
+
+.pos{color:var(--teal)}.neg{color:var(--red)}.neu{color:var(--text2)}
+.mono{font-family:var(--mono)}
+.lchip{display:inline-block;padding:2px 5px;border-radius:3px;font-size:10px;font-family:var(--mono);background:rgba(255,255,255,.04);color:var(--text2)}
+
+.pgbar{
+  padding:7px 14px;border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:6px;flex-shrink:0;
+}
+.pgi{font-size:10px;color:var(--text3);margin-right:auto}
+.pgb{
+  padding:3px 9px;border-radius:5px;border:1px solid var(--border2);
+  background:transparent;color:var(--text2);font-family:var(--font);font-size:11px;cursor:pointer;transition:.12s;
+}
+.pgb:hover:not(:disabled){border-color:var(--teal);color:var(--teal)}
+.pgb:disabled{opacity:.25;cursor:default}
+.pgn{
+  width:26px;height:24px;border-radius:5px;border:1px solid var(--border2);
+  background:transparent;color:var(--text2);font-size:11px;cursor:pointer;transition:.12s;
+  display:flex;align-items:center;justify-content:center;
+}
+.pgn:hover{border-color:var(--teal);color:var(--teal)}
+.pgn.on{background:var(--teal-dim);border-color:var(--teal);color:var(--teal);font-weight:700}
+.pgnums{display:flex;gap:3px}
+
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:260px;gap:10px;color:var(--text3)}
+.empty svg{width:44px;height:44px;stroke:var(--border2);fill:none}
+
+.btn-proposta{
+  padding:5px 12px;border-radius:6px;border:1px solid rgba(0,200,150,.3);
+  background:var(--teal-dim);color:var(--teal);font-family:var(--font);font-size:11px;
+  cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;font-weight:600;
+}
+.btn-proposta:hover{background:rgba(0,200,150,.15);border-color:var(--teal)}
+
+/* PDF Print styles */
+@media print{
+  body > *:not(#proposta-modal){ display:none !important }
+  #proposta-modal{ display:block !important;position:static;background:white;overflow:visible }
+  #proposta-modal > div > div:first-child{ display:none }
+  #prop-funds-editor{ display:none }
+  .no-print{ display:none !important }
+  #proposta-preview{ box-shadow:none !important }
+}
+#login-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+}
+.login-box{
+  width:100%;max-width:380px;padding:36px 32px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:16px;
+}
+.login-logo{display:flex;align-items:center;gap:8px;margin-bottom:28px;justify-content:center}
+.login-logo .logo-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--teal),var(--teal2));border-radius:7px;display:flex;align-items:center;justify-content:center}
+.login-logo .logo-mark svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.5}
+.login-logo span{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.login-logo em{font-style:normal;color:var(--teal)}
+.login-title{font-size:15px;font-weight:600;margin-bottom:4px;text-align:center}
+.login-sub{font-size:12px;color:var(--text3);margin-bottom:24px;text-align:center}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.login-field input{
+  width:100%;padding:9px 12px;border-radius:8px;
+  border:1px solid var(--border2);background:var(--bg3);
+  color:var(--text);font-family:var(--font);font-size:13px;outline:none;
+}
+.login-field input:focus{border-color:var(--teal)}
+.login-btn{
+  width:100%;padding:10px;border-radius:8px;border:none;
+  background:var(--teal);color:#000;font-family:var(--font);
+  font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;
+  transition:background .15s;
+}
+.login-btn:hover{background:var(--teal2)}
+.login-btn:disabled{background:var(--border2);cursor:default;color:var(--text3)}
+.login-err{font-size:11px;color:var(--red);margin-top:10px;text-align:center;min-height:16px}
+.login-plan{
+  margin-top:20px;padding:10px 12px;border-radius:8px;
+  background:var(--teal-dim);border:1px solid rgba(0,200,150,.2);
+  font-size:11px;color:var(--text2);text-align:center;
+}
+.login-plan strong{color:var(--teal)}
+
+/* plan badge in topbar */
+.plan-badge{
+  font-size:9px;font-weight:700;letter-spacing:.5px;padding:2px 7px;
+  border-radius:10px;text-transform:uppercase;
+}
+.plan-starter{background:rgba(74,158,255,.12);color:var(--btg)}
+.plan-pro{background:rgba(0,200,150,.12);color:var(--teal)}
+
+/* upgrade prompt */
+.upgrade-msg{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.2);
+  border-radius:8px;font-size:11px;color:var(--amber);margin:8px 12px;
+  flex-shrink:0;
+}
+.upgrade-msg a{color:var(--amber);font-weight:600}
+.cnpj-cell{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.cnpj-val{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.cnpj-actions{display:flex;gap:2px;opacity:0;transition:opacity .15s}
+tr:hover .cnpj-actions{opacity:1}
+.cnpj-btn{
+  width:18px;height:18px;border-radius:4px;border:1px solid var(--border2);
+  background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--text3);transition:all .12s;padding:0;
+}
+.cnpj-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-dim)}
+.cnpj-btn svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2}
+.copy-ok{color:var(--teal) !important;border-color:var(--teal) !important}
+
+/* ════ FAVORITES ════ */
+.fav-btn{
+  background:transparent;border:none;cursor:pointer;
+  font-size:13px;line-height:1;padding:1px 3px;
+  opacity:.25;transition:opacity .15s, transform .15s;
+  filter:grayscale(1);
+}
+.fav-btn:hover{opacity:.7;transform:scale(1.2)}
+.fav-btn.on{opacity:1;filter:none}
+.fav-tab{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 9px;border-radius:5px;border:1px solid var(--border2);
+  background:transparent;color:var(--text2);font-family:var(--font);font-size:11px;
+  cursor:pointer;transition:all .12s;
+}
+.fav-tab:hover,.fav-tab.on{border-color:var(--amber);color:var(--amber);background:rgba(245,166,35,.06)}
+.fav-count{
+  background:var(--amber);color:#000;font-size:9px;font-weight:700;
+  border-radius:8px;padding:1px 5px;min-width:16px;text-align:center;
+}
+
+/* ════ AI PANEL ════ */
+#ai-panel{
+  position:fixed;right:0;top:46px;bottom:0;width:360px;
+  background:var(--bg2);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:100;
+  transform:translateX(100%);transition:transform .25s ease;
+}
+#ai-panel.open{transform:translateX(0)}
+.ai-header{
+  padding:12px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.ai-header h3{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.ai-badge{
+  font-size:9px;font-weight:700;letter-spacing:.5px;
+  background:linear-gradient(135deg,var(--teal),#0096ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.ai-close{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;padding:2px}
+.ai-close:hover{color:var(--text)}
+.ai-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.ai-msg{max-width:90%;line-height:1.55;font-size:12px}
+.ai-msg.user{align-self:flex-end;background:var(--teal-dim);border:1px solid rgba(0,200,150,.2);
+  border-radius:10px 10px 2px 10px;padding:8px 11px;color:var(--text)}
+.ai-msg.bot{align-self:flex-start;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:10px 10px 10px 2px;padding:8px 11px;color:var(--text2)}
+.ai-msg.bot strong{color:var(--text)}
+.ai-msg.thinking{color:var(--text3);font-style:italic}
+.ai-suggestions{padding:8px 12px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:5px;flex-shrink:0}
+.ai-sug{
+  padding:4px 9px;border-radius:12px;border:1px solid var(--border2);
+  background:transparent;color:var(--text3);font-family:var(--font);font-size:10px;
+  cursor:pointer;transition:all .12s;text-align:left;
+}
+.ai-sug:hover{border-color:var(--teal);color:var(--teal)}
+.ai-input-row{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:6px;flex-shrink:0}
+.ai-input{
+  flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border2);
+  background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12px;
+  resize:none;min-height:38px;max-height:100px;outline:none;
+}
+.ai-input:focus{border-color:var(--teal)}
+.ai-send{
+  width:36px;height:36px;border-radius:8px;border:none;
+  background:var(--teal);color:#000;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:background .15s;font-size:14px;
+}
+.ai-send:hover{background:var(--teal2)}
+.ai-send:disabled{background:var(--border2);cursor:default}
+/* AI toggle button in topbar */
+.btn-ai{
+  padding:4px 10px;border-radius:6px;
+  border:1px solid rgba(0,150,255,.3);color:#4a9eff;
+  background:transparent;font-family:var(--font);font-size:11px;
+  cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;
+}
+.btn-ai:hover,.btn-ai.on{background:rgba(74,158,255,.08);border-color:#4a9eff}
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 28 28"><path d="M14 2 L24 7.5 L24 18.5 L19 21.5 L14 26 L9 21.5 L4 18.5 L4 7.5 Z" fill="none" stroke="white" stroke-width="1.8" stroke-linejoin="round"/><circle cx="10" cy="13" r="1.5" fill="white"/><circle cx="14" cy="13" r="1.5" fill="white"/><circle cx="18" cy="13" r="1.5" fill="white"/></svg>
+      </div>
+      <span><em>Open</em>Advisor</span>
+    </div>
+    <div class="login-title">Acesso ao Screener</div>
+    <div class="login-sub">Entre com seu email e senha para continuar</div>
+    <div class="login-field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-plan">Acesso restrito · <strong>OpenAdvisor Screener</strong></div>
+  </div>
+</div>
+
+<div id="app">
+<div class="topbar">
+  <a class="logo" href="#">
+    <div class="logo-mark">
+      <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Hexagon speech bubble -->
+        <path d="M14 2 L24 7.5 L24 18.5 L19 21.5 L14 26 L9 21.5 L4 18.5 L4 7.5 Z" fill="none" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
+        <circle cx="10" cy="13" r="1.5" fill="white"/>
+        <circle cx="14" cy="13" r="1.5" fill="white"/>
+        <circle cx="18" cy="13" r="1.5" fill="white"/>
+      </svg>
+    </div>
+    <em>Open</em>Advisor
+  </a>
+  <div class="sep"></div>
+  <div class="tabs">
+    <div class="tab active-btg" id="tab-btg" onclick="switchTab('btg')">
+      <span class="tab-dot"></span> BTG Pactual
+      <span class="tab-count" id="cnt-btg">—</span>
+    </div>
+    <div class="tab" id="tab-xp" onclick="switchTab('xp')">
+      <span class="tab-dot" style="color:var(--xp)"></span> XP Investimentos
+      <span class="tab-count" id="cnt-xp">—</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="plan-badge" id="plan-badge" style="display:none"></span>
+    <button class="btn-sm" id="btn-reload" onclick="reloadCurrentTab()" style="display:none">↑ Trocar planilha</button>
+    <button class="fav-tab" id="btn-favs" onclick="toggleFavs()" style="display:none">
+      ⭐ Favoritos <span class="fav-count" id="fav-count">0</span>
+    </button>
+    <button class="btn-ai" id="btn-ai" onclick="toggleAI()" style="display:none">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      IA Consultor
+    </button>
+    <button class="btn-sm btn-export" id="btn-export" onclick="exportShared()" style="display:none">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar
+    </button>
+    <button class="btn-sm" id="btn-logout" onclick="doLogout()" style="display:none;border-color:var(--border2)">Sair</button>
+  </div>
+</div>
+
+<!-- AI Panel -->
+<div id="ai-panel">
+  <div class="ai-header">
+    <h3>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      IA Consultor <span class="ai-badge">BETA</span>
+    </h3>
+    <button class="ai-close" onclick="toggleAI()">✕</button>
+  </div>
+  <div class="ai-messages" id="ai-messages">
+    <div class="ai-msg bot">Olá! Sou seu assistente de fundos. Posso analisar os dados carregados e ajudar com recomendações, comparações e análises. Como posso ajudar?</div>
+  </div>
+  <div class="ai-suggestions" id="ai-sugs">
+    <button class="ai-sug" onclick="aiSuggest(this)">Melhores fundos RF para conservador</button>
+    <button class="ai-sug" onclick="aiSuggest(this)">Top 5 multimercado por Sharpe</button>
+    <button class="ai-sug" onclick="aiSuggest(this)">Fundos com CDI 12M acima de 115%</button>
+    <button class="ai-sug" onclick="aiSuggest(this)">Compare BTG vs XP em crédito privado</button>
+  </div>
+  <div class="ai-input-row">
+    <textarea class="ai-input" id="ai-input" placeholder="Pergunte sobre os fundos..." rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI()}"></textarea>
+    <button class="ai-send" id="ai-send-btn" onclick="sendAI()">➤</button>
+  </div>
+</div>
+
+<div class="main" id="main">
+  <!-- Sidebar (shared, updated per tab) -->
+  <div class="sidebar" id="sidebar" style="display:none">
+
+    <!-- BTG: CDI YTD box -->
+    <div class="cdi-box" id="cdi-ytd-box">
+      <span class="fl">CDI Acumulado Ano (%)</span>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:5px">Para calcular % CDI Ano</div>
+      <input class="finp" id="inp-cdi-ytd" type="number" step="0.01" placeholder="ex: 2.10"
+        oninput="st().cdiYtd=parseFloat(this.value)||null;render()">
+    </div>
+
+    <!-- XP: CDI 12M reference box -->
+    <div class="cdi-box" id="cdi-12m-xp-box" style="display:none">
+      <span class="fl" style="color:#74aeff">CDI Acumulado 12M (%)</span>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:5px">Para calcular % CDI 12M</div>
+      <input class="finp" id="inp-cdi-12m-ref" type="number" step="0.01" placeholder="ex: 13.25"
+        oninput="st().cdi12mRef=parseFloat(this.value)||null;render()">
+    </div>
+
+    <div class="fs">
+      <span class="fl" id="lbl-cat">Categoria</span>
+      <div class="chips" id="chips-cat"></div>
+    </div>
+
+    <div class="fs" id="fs-subcat">
+      <span class="fl" id="lbl-subcat">Subcategoria</span>
+      <select class="fsel" id="sel-subcat" onchange="st().subcat=this.value;render()">
+        <option value="">Todas</option>
+      </select>
+    </div>
+
+    <div class="fs">
+      <span class="fl" id="lbl-suit">Suitability</span>
+      <div class="chips" id="chips-suit"></div>
+    </div>
+
+    <div class="fs" id="fs-trib">
+      <span class="fl">Tributação</span>
+      <div class="chips" id="chips-trib"></div>
+    </div>
+
+    <div class="fs" id="fs-captacao">
+      <span class="fl">Captação</span>
+      <div class="chips" id="chips-captacao"></div>
+    </div>
+
+    <div class="fs" id="fs-risco">
+      <span class="fl">Risco Gênio Máximo</span>
+      <input type="range" id="rng-risco" min="1" max="70" value="70"
+        oninput="st().riscoMax=+this.value<70?+this.value:null;document.getElementById('risco-val').textContent=this.value<70?this.value:'Todos';render()">
+      <span class="rval" id="risco-val">Todos</span>
+    </div>
+
+    <div class="fs">
+      <span class="fl">Liquidez Máxima (D+)</span>
+      <input type="range" id="rng-liq" min="0" max="366" value="366"
+        oninput="st().maxLiq=+this.value;document.getElementById('liq-val').textContent='D+'+this.value;render()">
+      <span class="rval" id="liq-val">D+366</span>
+    </div>
+
+    <div class="fs">
+      <span class="fl">Retorno 12M (%)</span>
+      <div class="irow"><label>Mín</label><input class="finp" id="inp-r12-min" type="number" placeholder="—" oninput="st().r12Min=parseFloat(this.value)||null;render()"></div>
+      <div class="irow"><label>Máx</label><input class="finp" id="inp-r12-max" type="number" placeholder="—" oninput="st().r12Max=parseFloat(this.value)||null;render()"></div>
+    </div>
+
+    <div class="fs" id="fs-cdi12">
+      <span class="fl" id="lbl-cdi12">% CDI 12M</span>
+      <div class="irow"><label>Mín</label><input class="finp" id="inp-cdi12-min" type="number" placeholder="—" oninput="st().cdi12Min=parseFloat(this.value)||null;render()"></div>
+    </div>
+
+    <div class="fs" id="fs-vol">
+      <span class="fl">Volatilidade 12M (%)</span>
+      <div class="irow"><label>Máx</label><input class="finp" id="inp-vol-max" type="number" placeholder="—" oninput="st().volMax=parseFloat(this.value)||null;render()"></div>
+    </div>
+
+    <div class="fs" id="fs-sharpe">
+      <span class="fl">Sharpe 12M</span>
+      <div class="irow"><label>Mín</label><input class="finp" id="inp-sharpe-min" type="number" step="0.1" placeholder="—" oninput="st().sharpeMin=parseFloat(this.value)||null;render()"></div>
+    </div>
+
+    <div class="fs">
+      <span class="fl">Aplicação Mínima (R$)</span>
+      <div class="irow"><label>Máx</label><input class="finp" id="inp-apmin-max" type="number" placeholder="—" oninput="st().apMinMax=parseFloat(this.value)||null;render()"></div>
+    </div>
+
+    <div class="fs" id="fs-top">
+      <span class="fl">Top Funds</span>
+      <div class="tog-row">
+        <label class="tog"><input type="checkbox" id="chk-top" onchange="st().topOnly=this.checked;render()"><span class="tslider"></span></label>
+        <span class="tlab">⭐ Apenas Top Funds</span>
+      </div>
+    </div>
+
+    <button class="btn-reset" onclick="resetFilters()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.19"/></svg>
+      Limpar Filtros
+    </button>
+  </div>
+
+  <!-- Sidebar toggle — sits between sidebar and content in flex row -->
+  <button id="btn-sidebar-toggle" onclick="toggleSidebar()" title="Ocultar/exibir filtros" style="display:none"></button>
+
+  <!-- Content area -->
+  <div class="content" id="content">
+    <!-- Upload panels per tab -->
+    <div class="upload-panel" id="up-btg">
+      <div class="upload-hero">
+        <h2>FundGuide · BTG Pactual</h2>
+        <p>Carregue a planilha oficial do BTG FundGuide para começar</p>
+      </div>
+      <div class="upload-box" id="drop-btg"
+        onclick="document.getElementById('file-btg').click()"
+        ondragover="ev(event,'drop-btg')" ondragleave="el('drop-btg')" ondrop="ed(event,'btg')">
+        <div class="upload-icon upload-icon-btg">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <h3>Planilha BTG FundGuide</h3>
+        <p>Aba <strong>Plataforma aberta + assessor</strong><br>Arraste ou clique para selecionar</p>
+        <button class="upload-cta cta-btg">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Carregar .xlsx BTG
+        </button>
+        <p class="upload-note">Arquivo permanece local · não é enviado a nenhum servidor</p>
+      </div>
+      <input type="file" id="file-btg" accept=".xlsx,.xls" onchange="handleFile(this.files[0],'btg')">
+    </div>
+
+    <div class="upload-panel" id="up-xp" style="display:none">
+      <div class="upload-hero">
+        <h2>Lista de Fundos · XP Investimentos</h2>
+        <p>Carregue a planilha de fundos da XP para começar</p>
+      </div>
+      <div class="upload-box" id="drop-xp"
+        onclick="document.getElementById('file-xp').click()"
+        ondragover="ev(event,'drop-xp')" ondragleave="el('drop-xp')" ondrop="ed(event,'xp')">
+        <div class="upload-icon upload-icon-xp">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <h3>Lista de Fundos XP</h3>
+        <p>Planilha com NOME_FUNDO, CLASSIFICAÇÃO_XP<br>Arraste ou clique para selecionar</p>
+        <button class="upload-cta cta-xp">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Carregar .xlsx XP
+        </button>
+        <p class="upload-note">Arquivo permanece local · não é enviado a nenhum servidor</p>
+      </div>
+      <input type="file" id="file-xp" accept=".xlsx,.xls" onchange="handleFile(this.files[0],'xp')">
+    </div>
+
+    <!-- Screener (shown when data loaded) -->
+    <div id="screener" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+      <div class="statsbar" id="statsbar"></div>
+      <div class="toolbar">
+        <div class="srch-wrap">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="srch" id="srch" placeholder="Buscar fundo ou gestora…" oninput="st().search=this.value;st().page=1;render()">
+        </div>
+        <div class="tright">
+          <button class="btn-proposta" id="btn-proposta" onclick="openProposta()" style="display:none">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Gerar Proposta
+          </button>
+          <select class="perpage" id="perpage" onchange="st().perPage=+this.value;st().page=1;render()">
+            <option value="25">25</option><option value="50" selected>50</option><option value="100">100</option>
+          </select>
+          <span style="font-size:10px;color:var(--text3)">por página</span>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+      </div>
+      <div class="pgbar" id="pgbar"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ PROPOSTA MODAL ══ -->
+<div id="proposta-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);overflow-y:auto">
+  <div style="max-width:900px;margin:20px auto;padding:0 16px 40px">
+
+    <!-- Builder Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;margin-bottom:8px">
+      <h2 style="font-size:16px;font-weight:700">📄 Montar Proposta</h2>
+      <div style="display:flex;gap:8px">
+        <button onclick="printProposta()" style="padding:7px 16px;border-radius:7px;border:none;background:var(--teal);color:#000;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">
+          ⬇ Baixar PDF
+        </button>
+        <button onclick="closeProposta()" style="padding:7px 14px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-family:var(--font);font-size:12px;cursor:pointer">
+          Fechar
+        </button>
+      </div>
+    </div>
+
+    <!-- Config Panel -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+        <div>
+          <label style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:5px">Nome do Cliente</label>
+          <input id="prop-cliente" type="text" placeholder="João Silva" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12px;outline:none" oninput="updatePreview()">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:5px">Perfil do Investidor</label>
+          <select id="prop-perfil" onchange="loadProfileAlloc()" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12px;outline:none">
+            <option value="conservador">Conservador</option>
+            <option value="moderado" selected>Moderado</option>
+            <option value="arrojado">Arrojado</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:5px">Volume Investido (R$)</label>
+          <input id="prop-volume" type="number" placeholder="100000" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12px;outline:none" oninput="updatePreview()">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <label style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:5px">Seu Nome / Escritório</label>
+          <input id="prop-assessor" type="text" placeholder="Rogério Frutuozo · OpenAdvisor" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12px;outline:none" oninput="updatePreview()">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:5px">CDI Acumulado 12M (%)</label>
+          <input id="prop-cdi" type="number" placeholder="13.25" step="0.01" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12px;outline:none" oninput="updatePreview()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Funds editor -->
+    <div id="prop-funds-editor" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <span style="font-size:12px;font-weight:600">Fundos Selecionados</span>
+        <span style="font-size:10px;color:var(--text3)">Edite % de alocação · Total deve somar 100%</span>
+      </div>
+      <div id="prop-funds-list"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px;gap:6px;align-items:center">
+        <span style="font-size:11px;color:var(--text3)">Total:</span>
+        <span id="prop-total-pct" style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--teal)">0%</span>
+      </div>
+    </div>
+
+    <!-- PDF Preview -->
+    <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div style="padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Preview do PDF
+      </div>
+      <div id="proposta-preview" style="background:#fff;padding:0"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// SUPABASE AUTH
+// ══════════════════════════════════════════════
+const SUPA_URL = 'https://xwleldfqlcnkliissunf.supabase.co';
+const SUPA_KEY = 'sb_publishable_KiiP5UTZlkmmwkEVwRmL8Q_6E_RDEyE';
+const supa = window.supabase ? window.supabase.createClient(SUPA_URL, SUPA_KEY) : null;
+
+let currentUser = null;
+let userPlan = 'starter'; // 'starter' or 'pro'
+
+// Skip auth if admin version OR if supabase not available
+const IS_SHARED = !!window.__PRELOADED__;
+const SKIP_AUTH = !!window.__SKIP_AUTH__ || 
+  window.location.hostname.includes('open-screener') ||
+  window.location.hostname === 'localhost' ||
+  window.location.protocol === 'file:' ||
+  (!IS_SHARED && !supa);
+
+async function initAuth(){
+  // Admin/open-screener — skip login entirely
+  if(SKIP_AUTH){
+    currentUser = { email: 'admin' };
+    userPlan = 'pro';
+    document.getElementById('login-screen').style.display = 'none';
+    return;
+  }
+
+  // Consultores version — check session
+  const { data: { session } } = await supa.auth.getSession();
+  if(session?.user){
+    currentUser = session.user;
+    userPlan = session.user.user_metadata?.plan || 'starter';
+    document.getElementById('login-screen').style.display = 'none';
+    showApp();
+  } else {
+    // Hide app content, show login
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+}
+
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-err');
+
+  if(!email || !pass){ err.textContent = 'Preencha email e senha'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  err.textContent = '';
+
+  const { data, error } = await supa.auth.signInWithPassword({ email, password: pass });
+
+  if(error){
+    err.textContent = error.message === 'Invalid login credentials'
+      ? 'Email ou senha incorretos'
+      : 'Erro ao entrar. Tente novamente.';
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+    return;
+  }
+
+  currentUser = data.user;
+  userPlan = data.user.user_metadata?.plan || 'starter';
+  showApp();
+}
+
+async function doLogout(){
+  if(supa) await supa.auth.signOut();
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-err').textContent = '';
+}
+
+function showApp(){
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+
+  // Plan badge
+  const badge = document.getElementById('plan-badge');
+  if(badge && currentUser?.email !== 'admin'){
+    badge.style.display = '';
+    badge.textContent = userPlan === 'pro' ? '⚡ Pro' : 'Starter';
+    badge.className = 'plan-badge ' + (userPlan === 'pro' ? 'plan-pro' : 'plan-starter');
+  }
+
+  // Logout button
+  const logoutBtn = document.getElementById('btn-logout');
+  if(logoutBtn && currentUser?.email !== 'admin') logoutBtn.style.display = '';
+
+  // If shared/preloaded version, go straight to screener
+  if(IS_SHARED) return;
+}
+
+// Gate pro features
+function isPro(){ return userPlan === 'pro' || SKIP_AUTH; }
+
+// Start auth on load
+document.addEventListener('DOMContentLoaded', initAuth);
+
+
+const stores = {
+  btg: { funds: [], loaded: false },
+  xp:  { funds: [], loaded: false }
+};
+
+const states = {
+  btg: mkState(),
+  xp:  mkState()
+};
+
+let activeTab = 'btg';
+
+function mkState(){
+  return {
+    cat:'', suit:[], trib:'', subcat:'', captacao:'',
+    maxLiq:366, r12Min:null, r12Max:null,
+    cdi12Min:null, volMax:null, sharpeMin:null, apMinMax:null,
+    topOnly:false, search:'', cdiYtd:null, cdi12mRef:null, riscoMax:null,
+    sortCol:null, sortDir:1, page:1, perPage:50
+  };
+}
+
+function st(){ return states[activeTab]; }
+function store(){ return stores[activeTab]; }
+
+// ══════════════════════════════════════════════
+// TAB SWITCH
+// ══════════════════════════════════════════════
+function switchTab(t){
+  activeTab = t;
+
+  // Update tab styles
+  document.getElementById('tab-btg').className = 'tab' + (t==='btg' ? ' active-btg' : '');
+  document.getElementById('tab-xp').className  = 'tab' + (t==='xp'  ? ' active-xp'  : '');
+
+  if(stores[t].loaded){
+    // Always show screener and fully re-render for the selected tab
+    document.getElementById('up-btg').style.display   = 'none';
+    document.getElementById('up-xp').style.display    = 'none';
+    document.getElementById('screener').style.display = 'flex';
+    document.getElementById('sidebar').style.display  = '';
+    document.getElementById('btn-reload').style.display = '';
+    // Rebuild sidebar UI for this tab's data, then render table
+    initSidebar();
+    render();
+  } else {
+    showUploadPanel(t);
+  }
+}
+
+function showUploadPanel(t){
+  document.getElementById('up-btg').style.display  = t==='btg' ? 'flex' : 'none';
+  document.getElementById('up-xp').style.display   = t==='xp'  ? 'flex' : 'none';
+  document.getElementById('screener').style.display = 'none';
+  document.getElementById('sidebar').style.display  = 'none';
+  document.getElementById('btn-reload').style.display = 'none';
+}
+
+function showScreener(){
+  document.getElementById('up-btg').style.display   = 'none';
+  document.getElementById('up-xp').style.display    = 'none';
+  document.getElementById('screener').style.display = 'flex';
+  document.getElementById('sidebar').style.display  = '';
+  // Hide admin buttons in shared mode
+  if(!window.__IS_SHARED__){
+    document.getElementById('btn-reload').style.display = '';
+    const anyLoaded = stores.btg.loaded || stores.xp.loaded;
+    document.getElementById('btn-export').style.display = anyLoaded ? '' : 'none';
+  }
+  document.getElementById('btn-sidebar-toggle').style.display = '';
+  document.getElementById('btn-favs').style.display = isPro() ? '' : 'none';
+  document.getElementById('btn-ai').style.display   = isPro() ? '' : 'none';
+
+  // Show upgrade message for Starter users
+  const existing = document.getElementById('upgrade-bar');
+  if(!isPro() && !existing){
+    const bar = document.createElement('div');
+    bar.id = 'upgrade-bar';
+    bar.className = 'upgrade-msg';
+    bar.innerHTML = '⚡ Quer IA Consultor e Favoritos? <a href="mailto:rogerio.f@openadvisor.com.br?subject=Upgrade Pro">Faça upgrade para Pro →</a>';
+    document.getElementById('screener').prepend(bar);
+  }
+  updateFavCount();
+  showPropostaBtn();
+  initSidebar();
+  render();
+}
+
+function reloadCurrentTab(){
+  stores[activeTab].loaded = false;
+  stores[activeTab].funds  = [];
+  states[activeTab] = mkState();
+  document.getElementById('cnt-'+activeTab).textContent = '—';
+  showUploadPanel(activeTab);
+}
+
+// ══════════════════════════════════════════════
+// DRAG & DROP HELPERS
+// ══════════════════════════════════════════════
+function ev(e, id){ e.preventDefault(); document.getElementById(id).classList.add('drag-over'); }
+function el(id){ document.getElementById(id).classList.remove('drag-over'); }
+function ed(e, src){ e.preventDefault(); el('drop-'+src); handleFile(e.dataTransfer.files[0], src); }
+
+// ══════════════════════════════════════════════
+// FILE PARSING
+// ══════════════════════════════════════════════
+function handleFile(file, src){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
+    if(src === 'btg') parseBTG(wb);
+    else              parseXP(wb);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseBTG(wb){
+  // Find correct sheet
+  const sheetName = wb.SheetNames.find(s => s.toLowerCase().includes('plataforma')) || wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+
+  const funds = rows.slice(1).filter(r => r[0]).map(r => {
+    const pct = v => v == null ? null : +v * 100;
+    return {
+      nome:       str(r[0]),
+      cnpj:       str(r[2]),
+      gestora:    str(r[14]),
+      categoria:  str(r[5]),
+      subcategoria: str(r[6]),
+      suitability:  str(r[13]),
+      tributacao:   str(r[20]),
+      liquidezStr:  str(r[28]),
+      liquidezD:    parseLiqD(r[28]),
+      retMes:   pct(r[37]),
+      retAno:   pct(r[38]),
+      ret12m:   pct(r[39]),
+      ret24m:   pct(r[40]),
+      ret36m:   pct(r[41]),
+      ret2025:  pct(r[42]),
+      cdi12m:   r[45] != null ? +r[45]*100 : null,
+      cdi24m:   r[46] != null ? +r[46]*100 : null,
+      vol12m:   pct(r[51]),
+      sharpe12m: num(r[52]),
+      txAdm:    pct(r[29]),
+      txPerf:   pct(r[33]),
+      bench:    str(r[34]),
+      apMin:    num(r[22]),
+      pl:       num(r[53]),
+      topFunds: str(r[3]) === 'Sim',
+      tipo:     null, captacao: null, risco: null
+    };
+  });
+
+  stores.btg.funds  = funds;
+  stores.btg.loaded = true;
+  document.getElementById('cnt-btg').textContent = funds.length.toLocaleString('pt-BR');
+  activeTab = 'btg';
+  document.getElementById('tab-btg').className = 'tab active-btg';
+  document.getElementById('tab-xp').className  = 'tab';
+  showScreener();
+}
+
+function parseXP(wb){
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+
+  const funds = rows.slice(1).filter(r => r[0]).map(r => {
+    const p = v => parseXPPct(v);
+    // liquidez = cotização + liquidação
+    const cotD = parseLiqD(r[9]);
+    const liqD = parseLiqD(r[11]);
+    const totalD = (cotD||0) + (liqD||0);
+    return {
+      nome:       str(r[0]),
+      cnpj:       str(r[1]),
+      gestora:    str(r[2]),
+      categoria:  str(r[3]),   // CVM
+      subcategoria: str(r[4]), // XP
+      suitability:  str(r[6]) || 'Geral',
+      tributacao:   null,
+      liquidezStr:  'D+'+(cotD||0)+'+'+( liqD||0),
+      liquidezD:    totalD,
+      retMes:   p(r[14]),
+      retAno:   p(r[15]),
+      ret12m:   p(r[16]),
+      ret24m:   p(r[17]),
+      ret36m:   p(r[18]),
+      ret2025:  null,
+      cdi12m:   null,
+      cdi24m:   null,
+      vol12m:   null,
+      sharpe12m: null,
+      txAdm:    num(r[22]),
+      txPerf:   num(r[24]),
+      bench:    null,
+      apMin:    num(r[8]),
+      pl:       null,
+      topFunds: false,
+      tipo:     str(r[6]),
+      captacao: str(r[5]),
+      risco:    r[21] != null ? 'Risco '+r[21] : null,
+      riscoNum: r[21] != null ? +r[21] : null
+    };
+  });
+
+  stores.xp.funds  = funds;
+  stores.xp.loaded = true;
+  document.getElementById('cnt-xp').textContent = funds.length.toLocaleString('pt-BR');
+  activeTab = 'xp';
+  document.getElementById('tab-btg').className = 'tab';
+  document.getElementById('tab-xp').className  = 'tab active-xp';
+  showScreener();
+}
+
+// ══════════════════════════════════════════════
+// SIDEBAR INIT
+// ══════════════════════════════════════════════
+function initSidebar(){
+  const funds = store().funds;
+  const isBTG = activeTab === 'btg';
+  const isXP  = activeTab === 'xp';
+
+  // CDI boxes
+  document.getElementById('cdi-ytd-box').style.display       = ''; // both tabs
+  document.getElementById('cdi-12m-xp-box').style.display    = isXP  ? '' : 'none';
+  document.getElementById('cdi-ytd-box').querySelector('.fl').textContent = 'CDI Acumulado Ano (%)';
+
+  // fs-cdi12 label adapts: BTG = "% CDI 12M mínimo", XP = "% CDI 12M mínimo (calculado)"
+  document.getElementById('fs-cdi12').style.display = '';
+  document.getElementById('lbl-cdi12').textContent = isBTG ? '% CDI 12M' : '% CDI 12M (calculado)';
+
+  // Categoria chips
+  const cats = unique(funds.map(f => f.categoria)).sort();
+  buildChips('chips-cat', cats, 'cat', false);
+
+  // Subcategoria dropdown (BTG = subcat BTG, XP = classificacao XP)
+  document.getElementById('fs-subcat').style.display = '';
+  document.getElementById('lbl-cat').textContent    = isBTG ? 'Categoria' : 'Classificação CVM';
+  document.getElementById('lbl-subcat').textContent = isBTG ? 'Subcategoria' : 'Classificação XP';
+  const subcats = unique(funds.map(f => f.subcategoria).filter(Boolean)).sort();
+  const sel = document.getElementById('sel-subcat');
+  sel.innerHTML = '<option value="">Todas</option>' + subcats.map(sc => `<option value="${sc}">${sc}</option>`).join('');
+
+  // Suitability
+  document.getElementById('lbl-suit').textContent = isBTG ? 'Suitability' : 'Tipo de Investidor';
+  const suits = unique(funds.map(f => f.suitability).filter(Boolean)).sort();
+  buildChips('chips-suit', suits, 'suit', true);
+
+  // Tributação (BTG only)
+  document.getElementById('fs-trib').style.display = isBTG ? '' : 'none';
+  if(isBTG){
+    const tribs = unique(funds.map(f => f.tributacao).filter(Boolean)).sort();
+    buildChips('chips-trib', tribs, 'trib', false);
+  }
+
+  // Captação (XP only)
+  document.getElementById('fs-captacao').style.display = isXP ? '' : 'none';
+  if(isXP){
+    const caps = unique(funds.map(f => f.captacao).filter(Boolean)).sort();
+    buildChips('chips-captacao', caps, 'captacao', false);
+  }
+
+  // BTG-only filters
+  document.getElementById('fs-vol').style.display     = isBTG ? '' : 'none';
+  document.getElementById('fs-sharpe').style.display  = isBTG ? '' : 'none';
+  document.getElementById('fs-top').style.display     = isBTG ? '' : 'none';
+  // XP-only filters
+  document.getElementById('fs-risco').style.display   = isXP  ? '' : 'none';
+
+  // Restore inputs from current tab state (preserves filters on tab switch)
+  restoreInputs();
+}
+
+function toggleSidebar(){
+  const sb  = document.getElementById('sidebar');
+  const btn = document.getElementById('btn-sidebar-toggle');
+  const open = !sb.classList.contains('collapsed');
+  sb.classList.toggle('collapsed', open);
+  btn.classList.toggle('collapsed', open);
+  btn.textContent = open ? '›' : '‹';
+  btn.title = open ? 'Exibir filtros' : 'Ocultar filtros';
+}
+
+function buildChips(id, vals, field, multi){
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+
+  // "Todos" chip
+  const all = document.createElement('button');
+  const s0 = st();
+  all.className = 'chip all' + (multi ? (s0[field].length===0?' on':'') : (s0[field]===''?' on':''));
+  all.textContent = 'Todos';
+  all.onclick = () => {
+    const s = st(); // always fresh
+    if(multi) s[field] = []; else s[field] = '';
+    buildChips(id, vals, field, multi); render();
+  };
+  el.appendChild(all);
+
+  vals.forEach(v => {
+    const c = document.createElement('button');
+    const s1 = st();
+    const active = multi ? s1[field].includes(v) : s1[field] === v;
+    c.className = 'chip' + (active ? ' on' : '');
+    c.textContent = v;
+    c.onclick = () => {
+      const s = st(); // always fresh — fixes tab-switch stale closure bug
+      if(multi){
+        const arr = s[field];
+        const idx = arr.indexOf(v);
+        if(idx >= 0) arr.splice(idx, 1); else arr.push(v);
+      } else {
+        s[field] = s[field] === v ? '' : v;
+      }
+      buildChips(id, vals, field, multi); render();
+    };
+    el.appendChild(c);
+  });
+}
+
+// Restore UI inputs from current tab's state (called on tab switch)
+function restoreInputs(){
+  const s = st();
+  const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = (v != null && v !== '') ? v : ''; };
+  set('inp-cdi-ytd',    s.cdiYtd);
+  set('inp-cdi-12m-ref', s.cdi12mRef);
+  set('inp-r12-min',    s.r12Min);
+  set('inp-r12-max',    s.r12Max);
+  set('inp-cdi12-min',  s.cdi12Min);
+  set('inp-vol-max',    s.volMax);
+  set('inp-sharpe-min', s.sharpeMin);
+  set('inp-apmin-max',  s.apMinMax);
+  set('srch',           s.search);
+  const rng = document.getElementById('rng-liq');
+  if(rng){ rng.value = s.maxLiq; document.getElementById('liq-val').textContent = 'D+'+s.maxLiq; }
+  const rngR = document.getElementById('rng-risco');
+  if(rngR){
+    const rv = s.riscoMax || 70;
+    rngR.value = rv;
+    document.getElementById('risco-val').textContent = rv < 70 ? rv : 'Todos';
+  }
+  const chk = document.getElementById('chk-top');
+  if(chk) chk.checked = !!s.topOnly;
+  const pp = document.getElementById('perpage');
+  if(pp) pp.value = s.perPage || 50;
+  // Subcategoria dropdown — must be set AFTER the dropdown is rebuilt in initSidebar
+  const sel = document.getElementById('sel-subcat');
+  if(sel) sel.value = s.subcat || '';
+}
+
+// Clear all UI inputs (used only by resetFilters)
+function resetInputs(){
+  const ids = ['inp-cdi-ytd','inp-cdi-12m-ref','inp-r12-min','inp-r12-max','inp-cdi12-min','inp-vol-max','inp-sharpe-min','inp-apmin-max','srch'];
+  ids.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  const rng = document.getElementById('rng-liq');
+  if(rng){ rng.value = 366; document.getElementById('liq-val').textContent = 'D+366'; }
+  const rngR = document.getElementById('rng-risco');
+  if(rngR){ rngR.value = 70; document.getElementById('risco-val').textContent = 'Todos'; }
+  const chk = document.getElementById('chk-top');
+  if(chk) chk.checked = false;
+  const pp = document.getElementById('perpage');
+  if(pp) pp.value = '50';
+}
+
+function resetFilters(){
+  const tab = activeTab;
+  states[tab] = mkState();
+  resetInputs();
+  initSidebar();
+  render();
+}
+
+// ══════════════════════════════════════════════
+// FILTER + RENDER  — tab is always passed explicitly
+// ══════════════════════════════════════════════
+function getFiltered(tab){
+  const s = states[tab];
+  const funds = stores[tab].funds;
+  return funds.filter(f => {
+    if(s.cat     && f.categoria    !== s.cat)     return false;
+    if(s.subcat  && f.subcategoria !== s.subcat)  return false;
+    if(s.suit.length > 0 && !s.suit.includes(f.suitability)) return false;
+    if(s.trib    && f.tributacao   !== s.trib)    return false;
+    if(s.captacao && f.captacao    !== s.captacao) return false;
+    if(s.maxLiq < 366 && (f.liquidezD == null || f.liquidezD > s.maxLiq)) return false;
+    if(s.r12Min  != null && (f.ret12m == null || f.ret12m < s.r12Min))  return false;
+    if(s.r12Max  != null && (f.ret12m == null || f.ret12m > s.r12Max))  return false;
+    if(s.cdi12Min != null){
+      const cdiVal = tab === 'btg'
+        ? f.cdi12m
+        : (s.cdi12mRef && f.ret12m != null ? f.ret12m / s.cdi12mRef * 100 : null);
+      if(cdiVal == null || cdiVal < s.cdi12Min) return false;
+    }
+    if(s.volMax    != null && (f.vol12m    == null || f.vol12m    > s.volMax))    return false;
+    if(s.sharpeMin != null && (f.sharpe12m == null || f.sharpe12m < s.sharpeMin)) return false;
+    if(s.apMinMax  != null && (f.apMin     == null || f.apMin     > s.apMinMax))  return false;
+    if(s.riscoMax  != null && (f.riscoNum  == null || f.riscoNum  > s.riscoMax))  return false;
+    if(s.topOnly && !f.topFunds) return false;
+    if(s.search){
+      const q = s.search.toLowerCase();
+      if(!f.nome.toLowerCase().includes(q) && !f.gestora.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function render(){
+  // Snapshot the tab NOW — prevents any async/event re-entrancy from using wrong tab
+  const tab = activeTab;
+  if(!stores[tab] || !stores[tab].loaded) return;
+  const s = states[tab];
+  let funds = getFiltered(tab);
+  if(showingFavs) funds = funds.filter(f => favorites.has(f.cnpj));
+
+  // Sort
+  if(s.sortCol != null){
+    funds = [...funds].sort((a,b) => {
+      let va = a[s.sortCol], vb = b[s.sortCol];
+      if(va == null) return 1; if(vb == null) return -1;
+      if(typeof va === 'string') return va.localeCompare(vb) * s.sortDir;
+      return (va - vb) * s.sortDir;
+    });
+  }
+
+  renderStats(funds, tab, s);
+
+  const total = funds.length;
+  const pages = Math.max(1, Math.ceil(total / s.perPage));
+  s.page = Math.min(s.page, pages);
+  const start = (s.page - 1) * s.perPage;
+  const slice = funds.slice(start, start + s.perPage);
+
+  renderTable(slice, tab, s);
+  renderPagination(total, pages, s.page, s.perPage);
+}
+
+// ── STATS ──
+function renderStats(funds, tab, s){
+  const n = funds.length;
+  const avg = arr => { const v = arr.filter(x => x != null); return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; };
+
+  let stats = [
+    { v: n.toLocaleString('pt-BR'), l: 'Fundos' },
+    { v: fmt(avg(funds.map(f=>f.ret12m)), 2, true)+'%', l: 'Ret. Médio 12M' },
+  ];
+
+  if(tab === 'btg'){
+    stats.push({ v: fmt(avg(funds.map(f=>f.cdi12m)),    1, true)+'%', l: '% CDI Médio 12M' });
+    stats.push({ v: fmt(avg(funds.map(f=>f.vol12m)),    2, true)+'%', l: 'Vol. Média 12M'  });
+    stats.push({ v: fmt(avg(funds.map(f=>f.sharpe12m)), 2, true),     l: 'Sharpe Médio'    });
+  } else {
+    if(s.cdiYtd){
+      const cdiAnoVals = funds.map(f => f.retAno != null ? f.retAno / s.cdiYtd * 100 : null);
+      stats.push({ v: fmt(avg(cdiAnoVals), 1, true)+'%', l: '% CDI Médio Ano' });
+    } else {
+      stats.push({ v: fmt(avg(funds.map(f=>f.retAno)), 2, true)+'%', l: 'Ret. Médio Ano' });
+    }
+    if(s.cdi12mRef){
+      const cdiVals = funds.map(f => f.ret12m != null ? f.ret12m / s.cdi12mRef * 100 : null);
+      stats.push({ v: fmt(avg(cdiVals), 1, true)+'%', l: '% CDI Médio 12M' });
+    } else {
+      stats.push({ v: fmt(avg(funds.map(f=>f.ret24m)), 2, true)+'%', l: 'Ret. Médio 24M' });
+    }
+  }
+
+  document.getElementById('statsbar').innerHTML = stats.map(st =>
+    `<div><div class="stat-v">${st.v}</div><div class="stat-l">${st.l}</div></div>`
+  ).join('');
+}
+
+// ── TABLE ──
+const BTG_COLS = [
+  { key:'nome',       label:'Fundo',       sortKey:'nome' },
+  { key:'cnpj',       label:'CNPJ',        sortKey:'cnpj' },
+  { key:'categoria',  label:'Categoria',   sortKey:'categoria' },
+  { key:'subcategoria',label:'Subcategoria',sortKey:'subcategoria' },
+  { key:'suitability',label:'Suitability', sortKey:'suitability' },
+  { key:'tributacao', label:'Tributação',  sortKey:'tributacao' },
+  { key:'liquidezD',  label:'Liquidez',    sortKey:'liquidezD' },
+  { key:'retMes',     label:'Mês %',       sortKey:'retMes' },
+  { key:'retAno',     label:'Ano %',       sortKey:'retAno' },
+  { key:'_cdiYtd',    label:'% CDI Ano',   sortKey:'retAno' },
+  { key:'ret12m',     label:'12M %',       sortKey:'ret12m' },
+  { key:'ret24m',     label:'24M %',       sortKey:'ret24m' },
+  { key:'cdi12m',     label:'CDI 12M %',   sortKey:'cdi12m' },
+  { key:'cdi24m',     label:'CDI 24M %',   sortKey:'cdi24m' },
+  { key:'vol12m',     label:'Vol 12M',     sortKey:'vol12m' },
+  { key:'sharpe12m',  label:'Sharpe',      sortKey:'sharpe12m' },
+  { key:'txAdm',      label:'Tx Adm %',    sortKey:'txAdm' },
+  { key:'apMin',      label:'Ap. Mín R$',  sortKey:'apMin' },
+  { key:'pl',         label:'PL',          sortKey:'pl' },
+];
+
+const XP_COLS = [
+  { key:'nome',        label:'Fundo',           sortKey:'nome' },
+  { key:'cnpj',        label:'CNPJ',            sortKey:'cnpj' },
+  { key:'categoria',   label:'Classif. CVM',    sortKey:'categoria' },
+  { key:'subcategoria',label:'Classif. XP',     sortKey:'subcategoria' },
+  { key:'suitability', label:'Tipo Investidor', sortKey:'suitability' },
+  { key:'captacao',    label:'Captação',        sortKey:'captacao' },
+  { key:'liquidezD',   label:'Liquidez Total',  sortKey:'liquidezD' },
+  { key:'retMes',      label:'Mês %',           sortKey:'retMes' },
+  { key:'retAno',      label:'Ano %',           sortKey:'retAno' },
+  { key:'_cdiYtdXP',   label:'% CDI Ano',       sortKey:'retAno' },
+  { key:'ret12m',      label:'12M %',           sortKey:'ret12m' },
+  { key:'_cdi12mXP',   label:'% CDI 12M',       sortKey:'ret12m' },
+  { key:'ret24m',      label:'24M %',           sortKey:'ret24m' },
+  { key:'ret36m',      label:'36M %',           sortKey:'ret36m' },
+  { key:'txAdm',       label:'Tx Adm %',        sortKey:'txAdm' },
+  { key:'txPerf',      label:'Tx Perf %',       sortKey:'txPerf' },
+  { key:'apMin',       label:'Ap. Mín R$',      sortKey:'apMin' },
+  { key:'risco',       label:'Risco Gênio',     sortKey:'riscoNum' },
+];
+
+function renderTable(funds, tab, s){
+  const cols = tab === 'btg' ? BTG_COLS : XP_COLS;
+
+  // Header
+  document.getElementById('thead').innerHTML = '<tr>' + cols.map((c,i) => {
+    const sorted = s.sortCol === c.sortKey;
+    const arrow = sorted ? (s.sortDir===1 ? '↑' : '↓') : '↕';
+    return `<th class="${sorted?'sorted':''}" onclick="sortBy('${c.sortKey}')">
+      ${c.label}<span class="sarr">${arrow}</span></th>`;
+  }).join('') + '</tr>';
+
+  // Body
+  if(!funds.length){
+    document.getElementById('tbody').innerHTML =
+      `<tr><td colspan="${cols.length}">
+        <div class="empty"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Nenhum fundo encontrado com os filtros selecionados</span></div>
+      </td></tr>`;
+    return;
+  }
+
+  document.getElementById('tbody').innerHTML = funds.map(f => {
+    return '<tr>' + cols.map(c => `<td>${renderCell(c.key, f, s)}</td>`).join('') + '</tr>';
+  }).join('');
+}
+
+function renderCell(key, f, s){
+  switch(key){
+    case 'nome':{
+      const isFav = favorites.has(f.cnpj);
+      return `<div style="display:flex;align-items:center;gap:4px">
+        <button class="fav-btn ${isFav?'on':''}" onclick="toggleFav('${esc(f.cnpj)}',this)" title="${isFav?'Remover favorito':'Adicionar favorito'}">⭐</button>
+        <div class="fname" title="${esc(f.gestora)}">${esc(f.nome)}${f.topFunds?' <span style="color:var(--amber);font-size:10px">★</span>':''}</div>
+      </div>`;
+    }
+    case 'cnpj':{
+      const cnpj = esc(f.cnpj)||'';
+      const cnpjRaw = cnpj.replace(/\D/g,'');
+      return cnpj ? `<div class="cnpj-cell">
+        <span class="cnpj-val">${cnpj}</span>
+        <div class="cnpj-actions">
+          <button class="cnpj-btn" title="Copiar CNPJ" onclick="copyCNPJ('${cnpj}',this)">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          <a class="cnpj-btn" title="Ver no Mais Retorno" href="https://www.google.com/search?q=${encodeURIComponent(cnpj+' maisretorno')}" target="_blank" style="text-decoration:none">
+            <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        </div>
+      </div>` : '<span class="neu">—</span>';
+    }
+    case 'categoria':  return catBadge(f.categoria);
+    case 'subcategoria': return `<span style="color:var(--text2)">${esc(f.subcategoria)||'—'}</span>`;
+    case 'suitability': return suitBadge(f.suitability);
+    case 'tributacao':  return `<span style="color:var(--text2);font-size:10px">${esc(f.tributacao)||'—'}</span>`;
+    case 'captacao':    return f.captacao ? `<span class="badge" style="background:rgba(255,255,255,.05);color:var(--text2)">${f.captacao}</span>` : '<span class="neu">—</span>';
+    case 'liquidezD':   return f.liquidezStr ? `<span class="lchip">${f.liquidezStr}</span>` : '<span class="neu">—</span>';
+    case 'retMes':  return fmtPct(f.retMes, 2);
+    case 'retAno':  return fmtPct(f.retAno, 2);
+    case 'ret12m':  return fmtPct(f.ret12m, 2);
+    case 'ret24m':  return fmtPct(f.ret24m, 2);
+    case 'ret36m':  return fmtPct(f.ret36m, 2);
+    case 'cdi12m':  return fmtCDI(f.cdi12m);
+    case 'cdi24m':  return fmtCDI(f.cdi24m);
+    case '_cdiYtd':
+      if(!s.cdiYtd || f.retAno == null) return '<span class="neu">—</span>';
+      return fmtCDI(f.retAno / s.cdiYtd * 100);
+    case '_cdiYtdXP':
+      if(!s.cdiYtd || f.retAno == null) return '<span class="neu">—</span>';
+      return fmtCDI(f.retAno / s.cdiYtd * 100);
+    case '_cdi12mXP':
+      if(!s.cdi12mRef || f.ret12m == null) return '<span class="neu">—</span>';
+      return fmtCDI(f.ret12m / s.cdi12mRef * 100);
+    case 'vol12m':  return fmtPct(f.vol12m, 2, true);
+    case 'sharpe12m': return f.sharpe12m != null ? `<span class="mono ${f.sharpe12m >= 0 ? 'pos':'neg'}">${f.sharpe12m.toFixed(2).replace('.',',')}</span>` : '<span class="neu">—</span>';
+    case 'txAdm':   return f.txAdm != null ? `<span class="mono neu">${f.txAdm.toFixed(2).replace('.',',')}%</span>` : '<span class="neu">—</span>';
+    case 'txPerf':  return f.txPerf != null ? `<span class="mono neu">${f.txPerf.toFixed(2).replace('.',',')}%</span>` : '<span class="neu">—</span>';
+    case 'apMin':   return fmtMoney(f.apMin);
+    case 'pl':      return fmtMoney(f.pl);
+    case 'risco':{
+      if(f.riscoNum == null) return '<span class="neu">—</span>';
+      const r = f.riscoNum;
+      const col = r <= 10 ? '#00c896' : r <= 25 ? '#f5a623' : r <= 45 ? '#f07060' : '#f04d5a';
+      return `<span class="mono" style="font-size:11px;font-weight:600;color:${col}">${r}</span>`;
+    }
+    default: return '—';
+  }
+}
+
+function sortBy(key){
+  const s = states[activeTab];
+  if(s.sortCol === key) s.sortDir *= -1;
+  else { s.sortCol = key; s.sortDir = -1; }
+  s.page = 1;
+  render();
+}
+
+// ── PAGINATION ──
+function renderPagination(total, pages, page, perPage){
+  const start = (page-1)*perPage + 1;
+  const end   = Math.min(page*perPage, total);
+  let html = `<span class="pgi">Exibindo ${start}–${end} de ${total} fundos</span>`;
+  html += `<button class="pgb" onclick="goPage(${page-1})" ${page<=1?'disabled':''}>‹ Ant</button>`;
+  html += '<div class="pgnums">';
+  const range = pageRange(page, pages);
+  range.forEach(p => {
+    if(p === '…') html += `<div class="pgn" style="cursor:default;opacity:.4">…</div>`;
+    else html += `<button class="pgn ${p===page?'on':''}" onclick="goPage(${p})">${p}</button>`;
+  });
+  html += '</div>';
+  html += `<button class="pgb" onclick="goPage(${page+1})" ${page>=pages?'disabled':''}>Próx ›</button>`;
+  document.getElementById('pgbar').innerHTML = html;
+}
+
+function pageRange(cur, total){
+  if(total <= 7) return Array.from({length:total},(_,i)=>i+1);
+  if(cur <= 4) return [1,2,3,4,5,'…',total];
+  if(cur >= total-3) return [1,'…',total-4,total-3,total-2,total-1,total];
+  return [1,'…',cur-1,cur,cur+1,'…',total];
+}
+
+function goPage(p){ states[activeTab].page = p; render(); }
+
+// ══════════════════════════════════════════════
+// FORMAT HELPERS
+// ══════════════════════════════════════════════
+function fmtPct(v, dec=2, neutral=false){
+  if(v == null) return '<span class="neu">—</span>';
+  const cls = neutral ? 'neu' : (v > 0 ? 'pos' : v < 0 ? 'neg' : 'neu');
+  return `<span class="${cls} mono">${v.toFixed(dec).replace('.',',')}%</span>`;
+}
+function fmtCDI(v){
+  if(v == null) return '<span class="neu">—</span>';
+  const cls = v >= 100 ? 'pos' : 'neg';
+  return `<span class="${cls} mono">${v.toFixed(1).replace('.',',')}%</span>`;
+}
+function fmtMoney(v){
+  if(v == null) return '<span class="neu">—</span>';
+  if(v >= 1e9) return `<span class="neu mono">${(v/1e9).toFixed(1).replace('.',',')}B</span>`;
+  if(v >= 1e6) return `<span class="neu mono">${(v/1e6).toFixed(1).replace('.',',')}M</span>`;
+  if(v >= 1e3) return `<span class="neu mono">${(v/1e3).toFixed(0)}K</span>`;
+  return `<span class="neu mono">${v.toFixed(0)}</span>`;
+}
+function fmt(v, dec=2, skipNull=false){
+  if(v == null) return skipNull ? '—' : '<span class="neu">—</span>';
+  return v.toFixed(dec).replace('.',',');
+}
+
+function catBadge(cat){
+  if(!cat) return '<span class="neu">—</span>';
+  const c = cat.toLowerCase();
+  let cls = 'out';
+  if(c.includes('variável') || c.includes('variable')) cls='rv';
+  else if(c.includes('fixa') || c.includes('fixed')) cls='rf';
+  else if(c.includes('multi')) cls='mm';
+  else if(c.includes('altern')) cls='alt';
+  else if(c.includes('aloc')) cls='aloc';
+  else if(c.includes('camb')) cls='camb';
+  return `<span class="badge b-${cls}">${cat}</span>`;
+}
+
+function suitBadge(s){
+  if(!s || s === 'Geral') return '<span class="neu" style="font-size:10px">Geral</span>';
+  const map = {
+    'Sofisticado':'sof','Profissional':'sof',
+    'Moderado':'mod','Moderada':'mod',
+    'Conservador':'con','Conservadora':'con',
+    'Qualificado':'qual','Qualificada':'qual',
+  };
+  const cls = map[s] || 'mod';
+  return `<span class="badge s-${cls}">${s}</span>`;
+}
+
+// ══════════════════════════════════════════════
+// FAVORITES
+// ══════════════════════════════════════════════
+const favorites = new Set();
+let showingFavs = false;
+
+function toggleFav(cnpj, btn){
+  if(!cnpj) return;
+  if(favorites.has(cnpj)){
+    favorites.delete(cnpj);
+    btn.classList.remove('on');
+  } else {
+    favorites.add(cnpj);
+    btn.classList.add('on');
+  }
+  updateFavCount();
+}
+
+function updateFavCount(){
+  const el = document.getElementById('fav-count');
+  const btn = document.getElementById('btn-favs');
+  if(el) el.textContent = favorites.size;
+  if(btn) btn.classList.toggle('on', showingFavs);
+}
+
+function toggleFavs(){
+  showingFavs = !showingFavs;
+  updateFavCount();
+  render();
+}
+
+// Override getFiltered to support favs mode
+const _origGetFiltered = getFiltered;
+function getFilteredMaybeNavs(tab){
+  const base = getFiltered(tab);
+  if(!showingFavs) return base;
+  return base.filter(f => favorites.has(f.cnpj));
+}
+
+// ══════════════════════════════════════════════
+// COPY CNPJ
+// ══════════════════════════════════════════════
+function copyCNPJ(cnpj, btn){
+  navigator.clipboard.writeText(cnpj).then(() => {
+    btn.classList.add('copy-ok');
+    btn.title = 'Copiado!';
+    setTimeout(() => { btn.classList.remove('copy-ok'); btn.title='Copiar CNPJ'; }, 1500);
+  });
+}
+
+// ══════════════════════════════════════════════
+// AI CONSULTOR
+// ══════════════════════════════════════════════
+let aiOpen = false;
+
+function toggleAI(){
+  aiOpen = !aiOpen;
+  document.getElementById('ai-panel').classList.toggle('open', aiOpen);
+  document.getElementById('btn-ai').classList.toggle('on', aiOpen);
+}
+
+function aiSuggest(btn){
+  document.getElementById('ai-input').value = btn.textContent;
+  sendAI();
+}
+
+async function sendAI(){
+  const input = document.getElementById('ai-input');
+  const msg = input.value.trim();
+  if(!msg) return;
+  input.value = '';
+
+  const btn = document.getElementById('ai-send-btn');
+  btn.disabled = true;
+
+  // Add user message
+  addAIMsg(msg, 'user');
+
+  // Add thinking indicator
+  const thinkId = 'think-' + Date.now();
+  addAIMsg('Analisando os dados...', 'bot thinking', thinkId);
+
+  // Build context summary from loaded funds
+  const btgFunds = stores.btg.loaded ? stores.btg.funds : [];
+  const xpFunds  = stores.xp.loaded  ? stores.xp.funds  : [];
+
+  // Build rich context: stats + top funds per category
+  const filtered = getFiltered(activeTab);
+  const buildContext = (funds, label) => {
+    if(!funds.length) return `${label}: Não carregado`;
+
+    const catMap = {};
+    funds.forEach(f => {
+      const cat = f.categoria || 'Outros';
+      if(!catMap[cat]) catMap[cat] = [];
+      catMap[cat].push(f);
+    });
+
+    let ctx = `${label} (${funds.length} fundos total)\n`;
+
+    Object.entries(catMap).sort((a,b)=>b[1].length-a[1].length).forEach(([cat, cfunds]) => {
+      ctx += `\n== ${cat} (${cfunds.length} fundos) ==\n`;
+
+      // Group by suitability within category
+      const suitMap = {};
+      cfunds.forEach(f => {
+        const s = f.suitability || 'Geral';
+        if(!suitMap[s]) suitMap[s] = [];
+        suitMap[s].push(f);
+      });
+
+      Object.entries(suitMap).forEach(([suit, sfunds]) => {
+        const top = [...sfunds].filter(f=>f.ret12m!=null).sort((a,b)=>b.ret12m-a.ret12m).slice(0,3);
+        ctx += `  [${suit} — ${sfunds.length} fundos]\n`;
+        top.forEach(f => {
+          ctx += `    • ${f.nome} | 12M:${f.ret12m?.toFixed(2)}% | CDI12M:${f.cdi12m!=null?f.cdi12m.toFixed(0)+'%':'—'} | Liq:${f.liquidezStr||'—'} | Trib:${f.tributacao||'—'} | TxAdm:${f.txAdm?.toFixed(2)||'—'}%\n`;
+        });
+      });
+    });
+    return ctx;
+  };
+
+  const filteredCtx = (() => {
+    if(!filtered.length) return 'Nenhum fundo filtrado.';
+    const top = [...filtered].filter(f=>f.ret12m!=null).sort((a,b)=>b.ret12m-a.ret12m).slice(0,15);
+    return `${filtered.length} fundos filtrados. Top por 12M:\n` +
+      top.map(f=>`  • ${f.nome} (${f.categoria}) | 12M:${f.ret12m?.toFixed(2)}% | Liq:${f.liquidezStr||'—'} | Suit:${f.suitability||'—'}`).join('\n');
+  })();
+
+  const systemPrompt = `Você é um assistente especialista em fundos de investimento para assessores de investimentos brasileiros.
+Você tem acesso aos dados REAIS e COMPLETOS das plataformas BTG Pactual e XP Investimentos carregados pelo usuário.
+
+REGRA CRÍTICA — TRIBUTAÇÃO:
+Considere sempre a tributação ao recomendar fundos:
+- "Isento" → rendimentos isentos de IR (ex: debêntures incentivadas, CRI, CRA) — vantagem fiscal relevante
+- "Longo Prazo" → alíquota IR regressiva até 15% (acima de 2 anos) — ideal para horizonte longo
+- "Curto Prazo" → alíquota IR mínima 20% — menos eficiente fiscalmente
+- "Renda Variável" → IR 15% sobre ganhos — aplicável a fundos de ações
+Quando o usuário não especificar, priorize Isento e Longo Prazo. Sempre mencione a tributação nas recomendações.
+Quando o usuário mencionar perfil, use OBRIGATORIAMENTE os fundos com o suitability correto:
+- "conservador" → suitability: Conservador OU Moderado (NUNCA Sofisticado ou Profissional)
+- "moderado"    → suitability: Moderado (pode incluir Conservador)
+- "sofisticado" / "arrojado" → suitability: Sofisticado ou Profissional
+- "qualificado" → suitability: Qualificado, Sofisticado ou Profissional
+Se não houver fundos com o suitability correto nos dados, diga isso claramente.
+
+${buildContext(btgFunds, 'BTG PACTUAL')}
+
+${buildContext(xpFunds, 'XP INVESTIMENTOS')}
+
+FUNDOS ATUALMENTE FILTRADOS NA TELA (aba ${activeTab.toUpperCase()}):
+${filteredCtx}
+
+INSTRUÇÕES:
+- Responda sempre com base nos dados reais acima
+- Ao recomendar fundos, cite nome, retorno 12M, CDI 12M, liquidez e suitability
+- SEMPRE verifique se o suitability do fundo é adequado ao perfil perguntado
+- Seja objetivo e prático como um consultor sênior
+- Máximo 250 palavras
+- Use **negrito** para destacar nomes de fundos e métricas importantes`;
+
+  try {
+    const res = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: systemPrompt,
+        max_tokens: 600,
+        messages: [{ role: 'user', content: msg }]
+      })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      document.getElementById(thinkId)?.remove();
+      addAIMsg(`Erro API: ${data.error?.message || res.status}`, 'bot');
+    } else {
+      const reply = data.content?.[0]?.text || 'Não consegui processar a resposta.';
+      document.getElementById(thinkId)?.remove();
+      addAIMsg(reply, 'bot');
+    }
+  } catch(e) {
+    document.getElementById(thinkId)?.remove();
+    addAIMsg(`Erro: ${e.message}`, 'bot');
+  }
+
+  btn.disabled = false;
+  input.focus();
+}
+
+function addAIMsg(text, cls, id){
+  const wrap = document.getElementById('ai-messages');
+  const div = document.createElement('div');
+  div.className = 'ai-msg ' + cls;
+  if(id) div.id = id;
+  // Convert **bold** to <strong>
+  div.innerHTML = text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+// ══════════════════════════════════════════════
+// PROPOSTA PDF
+// ══════════════════════════════════════════════
+
+const ALLOC_PROFILES = {
+  conservador: [
+    { label:'Renda Fixa · Crédito Privado', pct:40, cats:['Renda Fixa'], subs:['Crédito Pós','Crédito High Grade','Crédito Estruturado'], suit:['Conservador','Moderado'] },
+    { label:'Renda Fixa · Inflação',         pct:25, cats:['Renda Fixa'], subs:['Inflação','Debêntures Incentivadas'], suit:['Conservador','Moderado'] },
+    { label:'Renda Fixa · Liquidez',          pct:20, cats:['Renda Fixa'], subs:['Referenciado DI','Crédito Liquidez','Ativo'], suit:['Conservador','Moderado'] },
+    { label:'Multimercado',                   pct:15, cats:['Multimercado'], subs:[], suit:['Conservador','Moderado'] },
+  ],
+  moderado: [
+    { label:'Renda Fixa · Crédito Privado', pct:30, cats:['Renda Fixa'], subs:['Crédito Pós','Crédito High Grade','Crédito Estruturado'], suit:['Moderado','Conservador'] },
+    { label:'Renda Fixa · Inflação',         pct:20, cats:['Renda Fixa'], subs:['Inflação','Debêntures Incentivadas'], suit:['Moderado','Conservador'] },
+    { label:'Multimercado',                   pct:30, cats:['Multimercado'], subs:[], suit:['Moderado'] },
+    { label:'Renda Variável',                 pct:20, cats:['Renda Variável','Ações'], subs:[], suit:['Moderado'] },
+  ],
+  arrojado: [
+    { label:'Renda Fixa · Crédito',          pct:20, cats:['Renda Fixa'], subs:['Crédito Pós','Crédito High Grade','Crédito Estruturado'], suit:['Sofisticado','Moderado'] },
+    { label:'Multimercado',                   pct:30, cats:['Multimercado'], subs:[], suit:['Sofisticado','Moderado'] },
+    { label:'Renda Variável',                 pct:50, cats:['Renda Variável','Ações'], subs:[], suit:['Sofisticado'] },
+  ],
+};
+
+let propostaFunds = [];
+
+function openProposta(){
+  document.getElementById('proposta-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  const assessorEl = document.getElementById('prop-assessor');
+  if(!assessorEl.value && currentUser?.email) assessorEl.value = currentUser.email.split('@')[0];
+  const cdi = states[activeTab].cdiYtd || states[activeTab].cdi12mRef;
+  if(cdi) document.getElementById('prop-cdi').value = cdi;
+  loadProfileAlloc();
+}
+
+function closeProposta(){
+  document.getElementById('proposta-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function loadProfileAlloc(){
+  const perfil = document.getElementById('prop-perfil').value;
+  const allocs = ALLOC_PROFILES[perfil];
+  const allFunds = [...(stores.btg.funds||[]), ...(stores.xp.funds||[])];
+  propostaFunds = [];
+
+  allocs.forEach(slot => {
+    let candidates = allFunds.filter(f => {
+      const catMatch = slot.cats.some(c => (f.categoria||'').toLowerCase().includes(c.toLowerCase()));
+      const subMatch = slot.subs.length === 0 || slot.subs.some(s => (f.subcategoria||'').toLowerCase().includes(s.toLowerCase()));
+      const suitMatch = slot.suit.length === 0 || slot.suit.some(s => (f.suitability||'').includes(s));
+      return catMatch && subMatch && suitMatch && f.ret12m != null;
+    });
+    candidates.sort((a,b) => (b.cdi12m||b.ret12m||0) - (a.cdi12m||a.ret12m||0));
+    const top3 = candidates.slice(0,3);
+    const pctEach = top3.length > 0 ? Math.round(slot.pct / top3.length) : 0;
+    top3.forEach((f,i) => {
+      propostaFunds.push({...f, pct: i===top3.length-1 ? slot.pct-pctEach*(top3.length-1) : pctEach, classe: slot.label});
+    });
+  });
+
+  renderFundsEditor();
+  updatePreview();
+}
+
+function renderFundsEditor(){
+  const list = document.getElementById('prop-funds-list');
+  if(!list) return;
+  list.innerHTML = '';
+  const byClasse = {};
+  propostaFunds.forEach((f,i) => { if(!byClasse[f.classe]) byClasse[f.classe]=[]; byClasse[f.classe].push({...f,idx:i}); });
+
+  Object.entries(byClasse).forEach(([classe, funds]) => {
+    const totalPct = funds.reduce((a,b)=>a+b.pct,0);
+    const hdr = document.createElement('div');
+    hdr.style.cssText='font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin:10px 0 5px;padding-bottom:4px;border-bottom:1px solid var(--border)';
+    hdr.textContent = `${classe} · ${totalPct}%`;
+    list.appendChild(hdr);
+
+    funds.forEach(f => {
+      const row = document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(24,40,64,.4)';
+      row.innerHTML=`
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(f.nome)}">${esc(f.nome)}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:1px">${esc(f.gestora||'')} · 12M: <span style="color:${(f.ret12m||0)>=0?'var(--teal)':'var(--red)'}">${f.ret12m!=null?f.ret12m.toFixed(2)+'%':'—'}</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+          <input type="number" value="${f.pct}" min="0" max="100" style="width:52px;padding:4px 6px;border-radius:5px;border:1px solid var(--border2);background:var(--bg3);color:var(--teal);font-family:var(--mono);font-size:12px;font-weight:700;text-align:center;outline:none"
+            oninput="propostaFunds[${f.idx}].pct=+this.value||0;updateTotals();updatePreview()">
+          <span style="font-size:11px;color:var(--text3)">%</span>
+          <button onclick="propostaFunds.splice(${f.idx},1);propostaFunds.forEach((x,i)=>x.idx=i);renderFundsEditor();updatePreview()" style="width:22px;height:22px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:14px;line-height:1" title="Remover">×</button>
+        </div>`;
+      list.appendChild(row);
+    });
+  });
+  updateTotals();
+}
+
+function updateTotals(){
+  const total = propostaFunds.reduce((a,b)=>a+(+b.pct||0),0);
+  const el = document.getElementById('prop-total-pct');
+  if(el){ el.textContent=total+'%'; el.style.color=total===100?'var(--teal)':total>100?'var(--red)':'var(--amber)'; }
+}
+
+function updatePreview(){
+  const cliente  = document.getElementById('prop-cliente')?.value  || 'Cliente';
+  const assessor = document.getElementById('prop-assessor')?.value || '';
+  const perfil   = document.getElementById('prop-perfil')?.value   || 'moderado';
+  const volume   = +document.getElementById('prop-volume')?.value  || 0;
+  const cdi12m   = +document.getElementById('prop-cdi')?.value     || 0;
+  const date     = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+
+  const weightedRet = propostaFunds.reduce((a,f)=>a+(f.ret12m||0)*f.pct/100,0);
+  const weightedCDI = cdi12m>0 ? (weightedRet/cdi12m*100) : null;
+  const perfilLabel = {conservador:'Conservador',moderado:'Moderado',arrojado:'Arrojado'}[perfil];
+  const perfilColor = {conservador:'#00c896',moderado:'#f5a623',arrojado:'#f04d5a'}[perfil];
+
+  const byClasse = {};
+  propostaFunds.forEach(f => { if(!byClasse[f.classe]) byClasse[f.classe]=0; byClasse[f.classe]+=(+f.pct||0); });
+
+  const classeColors = {'Crédito Privado':'#4a9eff','Inflação':'#bb80e8','Liquidez':'#74aeff','Multimercado':'#f5b040','Renda Variável':'#f07080'};
+  const getColor = cls => { for(const [k,v] of Object.entries(classeColors)) if(cls.includes(k)) return v; return '#45607a'; };
+
+  const allocBars = Object.entries(byClasse).map(([cls,pct])=>`
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+        <span style="font-size:11px;color:#444">${cls}</span>
+        <span style="font-size:11px;font-weight:700;color:#222">${pct}%</span>
+      </div>
+      <div style="height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${getColor(cls)};border-radius:4px"></div>
+      </div>
+    </div>`).join('');
+
+  const fundRows = propostaFunds.map(f=>{
+    const retColor=(f.ret12m||0)>=0?'#16a34a':'#dc2626';
+    const cdiVal = cdi12m>0&&f.ret12m!=null ? (f.ret12m/cdi12m*100).toFixed(0)+'%' : (f.cdi12m?f.cdi12m.toFixed(0)+'%':'—');
+    const vlr = volume>0 ? 'R$'+(volume*f.pct/100).toLocaleString('pt-BR',{maximumFractionDigits:0}) : '—';
+    return `<tr style="border-bottom:1px solid #f0f0f0">
+      <td style="padding:8px 10px;font-size:11px;font-weight:600;color:#222;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.nome)}</td>
+      <td style="padding:8px 10px;font-size:10px;color:#666">${esc(f.classe)}</td>
+      <td style="padding:8px 10px;font-size:12px;font-weight:700;color:#222;text-align:center">${f.pct}%</td>
+      <td style="padding:8px 10px;font-size:12px;font-weight:700;color:${retColor};text-align:center">${f.ret12m!=null?f.ret12m.toFixed(2)+'%':'—'}</td>
+      <td style="padding:8px 10px;font-size:11px;color:#444;text-align:center">${cdiVal}</td>
+      <td style="padding:8px 10px;font-size:11px;color:#444;text-align:right">${vlr}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('proposta-preview').innerHTML = `
+  <div style="font-family:'Helvetica Neue',Arial,sans-serif;color:#222;max-width:860px;margin:0 auto;padding:40px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:2px solid #00c896">
+      <div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:-.5px"><span style="color:#00c896">Open</span>Advisor</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">Plataforma de Análise de Fundos</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px;font-weight:600">${esc(assessor)}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">${date}</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#888;margin-bottom:4px">Proposta de Investimento</div>
+      <div style="font-size:26px;font-weight:800;color:#0a1628;letter-spacing:-.5px">${esc(cliente)}</div>
+      <div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:${perfilColor}15;border-radius:20px;border:1px solid ${perfilColor}40">
+        <div style="width:8px;height:8px;border-radius:50%;background:${perfilColor}"></div>
+        <span style="font-size:11px;font-weight:700;color:${perfilColor}">Perfil ${perfilLabel}</span>
+      </div>
+      ${volume>0?`<span style="margin-left:10px;font-size:12px;color:#666">Volume: <strong style="color:#222">R$ ${volume.toLocaleString('pt-BR')}</strong></span>`:''}
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+      ${[
+        {l:'Retorno Médio 12M',v:weightedRet.toFixed(2)+'%',c:weightedRet>=0?'#16a34a':'#dc2626'},
+        {l:'% do CDI 12M',v:weightedCDI?weightedCDI.toFixed(0)+'%':'—',c:weightedCDI&&weightedCDI>=100?'#16a34a':'#f59e0b'},
+        {l:'Fundos Selecionados',v:propostaFunds.length,c:'#0a1628'},
+      ].map(s=>`<div style="background:#f8fafc;border-radius:10px;padding:16px;border:1px solid #e8edf2">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.3px">${s.l}</div>
+        <div style="font-size:24px;font-weight:800;color:${s.c};letter-spacing:-.5px">${s.v}</div>
+      </div>`).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+      <div style="background:#f8fafc;border-radius:10px;padding:18px;border:1px solid #e8edf2">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:14px">Alocação por Classe</div>
+        ${allocBars}
+      </div>
+      <div style="background:#f8fafc;border-radius:10px;padding:18px;border:1px solid #e8edf2">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:14px">Comparativo CDI 12M</div>
+        ${cdi12m>0?`
+          <div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:11px;color:#444">Carteira Sugerida</span>
+              <span style="font-size:12px;font-weight:700;color:#16a34a">${weightedRet.toFixed(2)}%</span>
+            </div>
+            <div style="height:10px;background:#e8f5e9;border-radius:5px;overflow:hidden">
+              <div style="height:100%;width:${Math.min(weightedRet/(cdi12m||1)*80,100)}%;background:#16a34a;border-radius:5px"></div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:11px;color:#444">CDI (referência)</span>
+              <span style="font-size:12px;font-weight:700;color:#888">${cdi12m.toFixed(2)}%</span>
+            </div>
+            <div style="height:10px;background:#f0f0f0;border-radius:5px;overflow:hidden">
+              <div style="height:100%;width:80%;background:#bbb;border-radius:5px"></div>
+            </div>
+          </div>
+          ${weightedCDI?`<div style="margin-top:14px;padding:12px;background:#fff;border-radius:8px;text-align:center;border:1px solid #e8edf2">
+            <span style="font-size:12px;color:#888">Carteira representa </span>
+            <span style="font-size:22px;font-weight:800;color:${weightedCDI>=100?'#16a34a':'#f59e0b'}">${weightedCDI.toFixed(0)}%</span>
+            <span style="font-size:12px;color:#888"> do CDI</span>
+          </div>`:''}
+        `:'<div style="font-size:11px;color:#aaa;text-align:center;padding:30px">Informe o CDI 12M para comparativo</div>'}
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:10px">Fundos Recomendados</div>
+      <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e8edf2">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px">Fundo</th>
+            <th style="padding:10px;text-align:left;font-size:10px;font-weight:700;color:#888;text-transform:uppercase">Classe</th>
+            <th style="padding:10px;text-align:center;font-size:10px;font-weight:700;color:#888;text-transform:uppercase">Alocação</th>
+            <th style="padding:10px;text-align:center;font-size:10px;font-weight:700;color:#888;text-transform:uppercase">Retorno 12M</th>
+            <th style="padding:10px;text-align:center;font-size:10px;font-weight:700;color:#888;text-transform:uppercase">% CDI</th>
+            <th style="padding:10px;text-align:right;font-size:10px;font-weight:700;color:#888;text-transform:uppercase">Vlr. Alocado</th>
+          </tr>
+        </thead>
+        <tbody>${fundRows}</tbody>
+      </table>
+    </div>
+
+    <div style="padding:14px 16px;background:#f8fafc;border-radius:8px;border:1px solid #e8edf2">
+      <div style="font-size:9px;color:#999;line-height:1.7">
+        <strong style="color:#666">Aviso Legal:</strong> Esta proposta é meramente informativa e não constitui recomendação de investimento. Rentabilidade passada não é garantia de rentabilidade futura. Fundos de investimento não contam com garantia do administrador, do gestor ou do FGC. Antes de investir, leia o regulamento e o formulário de informações complementares do fundo. Elaborado por ${esc(assessor||'OpenAdvisor')} em ${date}.
+      </div>
+    </div>
+  </div>`;
+}
+
+function printProposta(){
+  // Hide modal chrome, print only preview
+  const modal = document.getElementById('proposta-modal');
+  const preview = document.getElementById('proposta-preview');
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Proposta OpenAdvisor</title>
+  <style>body{margin:0;padding:0;font-family:'Helvetica Neue',Arial,sans-serif}@media print{@page{margin:10mm}}</style>
+  </head><body>${preview.innerHTML}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ win.print(); }, 500);
+}
+
+function showPropostaBtn(){
+  const btn = document.getElementById('btn-proposta');
+  if(btn) btn.style.display = isPro() ? '' : 'none';
+}
+function num(v){ return v != null && !isNaN(+v) ? +v : null; }
+function parseLiqD(v){
+  if(v == null) return null;
+  const m = String(v).match(/\d+/);
+  return m ? +m[0] : null;
+}
+function parseXPPct(v){
+  if(v == null) return null;
+  if(typeof v === 'number') return v;
+  return parseFloat(String(v).replace(',','.').replace('%','').trim()) || null;
+}
+function unique(arr){ return [...new Set(arr.filter(Boolean))]; }
+function esc(s){ return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+
+// ══════════════════════════════════════════════
+// EXPORT — bake data into HTML for sharing
+// ══════════════════════════════════════════════
+function exportShared(){
+  const btn = document.getElementById('btn-export');
+  const originalHTML = btn.innerHTML;
+  btn.textContent = 'Gerando…';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    try {
+      const payload = {
+        btg: stores.btg.loaded ? stores.btg.funds : null,
+        xp:  stores.xp.loaded  ? stores.xp.funds  : null,
+        exportedAt: new Date().toLocaleDateString('pt-BR')
+      };
+
+      // Get current page HTML
+      let html = document.documentElement.outerHTML;
+
+      // Inject a bootstrap script that pre-loads the data before page init
+      const bootstrap = `<script id="preloaded-data">
+(function(){
+  const _d = ${JSON.stringify(payload)};
+  window.__PRELOADED__ = _d;
+})();
+<\/script>`;
+
+      // Insert bootstrap right after <head> opens
+      html = html.replace('<head>', '<head>\n' + bootstrap);
+
+      // Also inject a flag so the exported version hides "Trocar planilha" and "Exportar" buttons
+      html = html.replace('<head>', '<head>\n<script>window.__IS_SHARED__=true;<\/script>');
+
+      // Download
+      const date = new Date().toISOString().slice(0,10);
+      const sources = [stores.btg.loaded?'BTG':'', stores.xp.loaded?'XP':''].filter(Boolean).join('+');
+      const filename = `openadvisor_screener_${sources}_${date}.html`;
+      const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      btn.innerHTML = originalHTML;
+      btn.disabled = false;
+    }
+  }, 50);
+}
+
+// Auto-load preloaded data if this is a shared/exported version
+(function(){
+  if(!window.__PRELOADED__) return;
+  const p = window.__PRELOADED__;
+  // Wait for DOM then load
+  window.addEventListener('DOMContentLoaded', () => {
+    if(p.btg){
+      stores.btg.funds = p.btg;
+      stores.btg.loaded = true;
+      const cnt = document.getElementById('cnt-btg');
+      if(cnt) cnt.textContent = p.btg.length.toLocaleString('pt-BR');
+    }
+    if(p.xp){
+      stores.xp.funds = p.xp;
+      stores.xp.loaded = true;
+      const cnt = document.getElementById('cnt-xp');
+      if(cnt) cnt.textContent = p.xp.length.toLocaleString('pt-BR');
+    }
+    // Hide upload/admin controls in shared mode
+    if(window.__IS_SHARED__){
+      ['btn-reload','btn-export'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.style.display = 'none';
+      });
+    }
+    // Show the default tab (whichever has data)
+    const startTab = p.btg ? 'btg' : 'xp';
+    activeTab = startTab;
+    document.getElementById('tab-btg').className = 'tab' + (startTab==='btg' ? ' active-btg' : '');
+    document.getElementById('tab-xp').className  = 'tab' + (startTab==='xp'  ? ' active-xp'  : '');
+    // Add export date badge to topbar
+    if(p.exportedAt){
+      const badge = document.createElement('span');
+      badge.style.cssText = 'font-size:10px;color:var(--text3);margin-left:4px';
+      badge.textContent = 'Dados de ' + p.exportedAt;
+      document.querySelector('.topbar-right').prepend(badge);
+    }
+    showScreener();
+  });
+})();
+</script>
+</body>
+</html>

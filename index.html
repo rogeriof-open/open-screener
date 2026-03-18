@@ -251,12 +251,13 @@ input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;ba
 }
 .stats-group{display:flex;flex-direction:row;align-items:center}
 .stats-group.cdi-group{width:160px;flex-shrink:0;gap:16px}
+.stats-group.cdi-group .stat-v{font-size:16px}
 .stats-sep{width:1px;height:32px;background:var(--border);margin:0 16px;flex-shrink:0}
 .stats-group.main-group{flex:1;display:flex;flex-direction:row;justify-content:space-around;align-items:center}
-.stats-group > div{display:flex;flex-direction:column;align-items:center}
-.stat-v{font-size:16px;font-weight:600;font-family:var(--mono);letter-spacing:-.3px;color:var(--text)}
-.stat-l{font-size:9px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#8B9AB5}
-.stat-src{font-size:8px;color:var(--text3);margin-top:1px;letter-spacing:.05em}
+.stats-group > div{display:flex;flex-direction:column;align-items:center;min-width:100px;text-align:center}
+.stat-v{font-size:20px;font-weight:600;font-family:var(--mono);letter-spacing:-.3px;color:var(--text)}
+.stat-l{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#8B9AB5}
+.stat-src{font-size:9px;color:#5A6A8A;margin-top:1px;letter-spacing:.05em}
 .toolbar{
   padding:7px 14px;border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:8px;flex-shrink:0;
@@ -1567,36 +1568,36 @@ function renderStats(funds, tab, s){
   const avg = arr => { const v = arr.filter(x => x != null); return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; };
 
   // CDI group
-  const cdiYtdV = s.cdiYtd != null ? s.cdiYtd.toFixed(2).replace('.',',')+'%' : '—';
-  const cdi12mV = s.cdi12mRef != null ? s.cdi12mRef.toFixed(2).replace('.',',')+'%' : '—';
+  const cdiYtdV = s.cdiYtd != null ? s.cdiYtd.toFixed(2).replace('.',',') : '—';
+  const cdi12mV = s.cdi12mRef != null ? s.cdi12mRef.toFixed(2).replace('.',',') : '—';
   const cdiSrc = document.getElementById('cdi-data-label')?.textContent || '';
-  const srcLabel = cdiSrc.includes('BACEN') ? 'BACEN' : '';
+  const srcLine = cdiSrc || '';
 
   let cdiHtml = `<div class="stats-group cdi-group">
-    <div><div class="stat-v">${cdiYtdV}</div><div class="stat-l">CDI YTD</div>${srcLabel?`<div class="stat-src">${srcLabel}</div>`:''}</div>
-    <div><div class="stat-v">${cdi12mV}</div><div class="stat-l">CDI 12M</div></div>
+    <div><div class="stat-v">${cdiYtdV}</div><div class="stat-l">CDI YTD (%)</div></div>
+    <div><div class="stat-v">${cdi12mV}</div><div class="stat-l">CDI 12M (%)</div></div>
   </div><div class="stats-sep"></div>`;
 
-  // Screener stats
+  // Screener stats — no CDI values here (already in left group)
   let stats = [
     { v: n.toLocaleString('pt-BR'), l: 'Fundos' },
     { v: fmt(avg(funds.map(f=>f.ret12m)), 2, true)+'%', l: 'Ret. Médio 12M' },
   ];
 
   if(tab === 'btg'){
-    stats.push({ v: fmt(avg(funds.map(f=>f.cdi12m)),    1, true)+'%', l: '% CDI Médio 12M' });
-    stats.push({ v: fmt(avg(funds.map(f=>f.vol12m)),    2, true)+'%', l: 'Vol. Média 12M'  });
-    stats.push({ v: fmt(avg(funds.map(f=>f.sharpe12m)), 2, true),     l: 'Sharpe Médio'    });
+    stats.push({ v: fmt(avg(funds.map(f=>f.cdi12m)),    1, true)+'%', l: 'Média % CDI' });
+    stats.push({ v: fmt(avg(funds.map(f=>f.vol12m)),    2, true)+'%', l: 'Vol. Média'  });
+    stats.push({ v: fmt(avg(funds.map(f=>f.sharpe12m)), 2, true),     l: 'Sharpe'    });
   } else {
     if(s.cdiYtd){
       const cdiAnoVals = funds.map(f => f.retAno != null ? f.retAno / s.cdiYtd * 100 : null);
-      stats.push({ v: fmt(avg(cdiAnoVals), 1, true)+'%', l: '% CDI Médio Ano' });
+      stats.push({ v: fmt(avg(cdiAnoVals), 1, true)+'%', l: 'Média % CDI Ano' });
     } else {
       stats.push({ v: fmt(avg(funds.map(f=>f.retAno)), 2, true)+'%', l: 'Ret. Médio Ano' });
     }
     if(s.cdi12mRef){
       const cdiVals = funds.map(f => f.ret12m != null ? f.ret12m / s.cdi12mRef * 100 : null);
-      stats.push({ v: fmt(avg(cdiVals), 1, true)+'%', l: '% CDI Médio 12M' });
+      stats.push({ v: fmt(avg(cdiVals), 1, true)+'%', l: 'Média % CDI 12M' });
     } else {
       stats.push({ v: fmt(avg(funds.map(f=>f.ret24m)), 2, true)+'%', l: 'Ret. Médio 24M' });
     }

@@ -1543,6 +1543,7 @@ const XP_COLS = [
   { key:'cnpj',        label:'CNPJ',            sortKey:'cnpj' },
   { key:'categoria',   label:'Classif. CVM',    sortKey:'categoria' },
   { key:'subcategoria',label:'Classif. XP',     sortKey:'subcategoria' },
+  { key:'tributacao',  label:'Tributação',      sortKey:'tributacao' },
   { key:'suitability', label:'Tipo Investidor', sortKey:'suitability' },
   { key:'captacao',    label:'Captação',        sortKey:'captacao' },
   { key:'liquidezD',   label:'Liquidez Total',  sortKey:'liquidezD' },
@@ -1585,6 +1586,12 @@ function renderTable(funds, tab, s){
   }).join('');
 }
 
+const _isentoRxGlobal = /incentiva|debenture|debênture|infra|\bcri\b|\bcra\b|\blci\b|\blca\b|fundimob|imobili[aá]rio|fiagro/i;
+function isIsentoGlobal(f){
+  const txt = (f.nome||'') + ' ' + (f.categoria||'') + ' ' + (f.subcategoria||'');
+  return _isentoRxGlobal.test(txt);
+}
+
 function renderCell(key, f, s){
   switch(key){
     case 'nome':{
@@ -1612,7 +1619,11 @@ function renderCell(key, f, s){
     case 'categoria':  return catBadge(f.categoria);
     case 'subcategoria': return `<span style="color:var(--text2)">${esc(f.subcategoria)||'—'}</span>`;
     case 'suitability': return suitBadge(f.suitability);
-    case 'tributacao':  return `<span style="color:var(--text2);font-size:10px">${esc(f.tributacao)||'—'}</span>`;
+    case 'tributacao': {
+      const trib = isIsentoGlobal(f) ? 'Isento' : (f.tributacao || '\u2014');
+      const style = isIsentoGlobal(f) ? 'color:var(--teal);font-weight:600' : 'color:var(--text2)';
+      return `<span style="font-size:10px;${style}">${esc(trib)}</span>`;
+    }
     case 'captacao':    return f.captacao ? `<span class="badge" style="background:rgba(255,255,255,.05);color:var(--text2)">${f.captacao}</span>` : '<span class="neu">—</span>';
     case 'liquidezD':   return f.liquidezStr ? `<span class="lchip">${f.liquidezStr}</span>` : '<span class="neu">—</span>';
     case 'retMes':  return fmtPct(f.retMes, 2);
@@ -1829,11 +1840,7 @@ async function sendAI(){
   const isXPLabel = (label) => label.includes('XP');
 
   // Infer tax-exempt status from fund name/category
-  const _isentoRx = /incentiva|debenture|debênture|infra|\bcri\b|\bcra\b|\blci\b|\blca\b|fundimob|imobili[aá]rio|fiagro/i;
-  const isIsento = (f) => {
-    const txt = (f.nome||'') + ' ' + (f.categoria||'') + ' ' + (f.subcategoria||'');
-    return _isentoRx.test(txt);
-  };
+  const isIsento = isIsentoGlobal;
 
   // Classify XP funds by riscoNum thresholds
   const riscoProfile = (f) => {

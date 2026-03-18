@@ -770,6 +770,13 @@ const supa = window.supabase ? window.supabase.createClient(SUPA_URL, SUPA_KEY, 
 
 let currentUser = null;
 let userPlan = 'starter'; // 'starter' or 'pro'
+let isSettingPassword = false;
+
+// Bloquear redirecionamento automático durante fluxo de criar senha
+if(supa) supa.auth.onAuthStateChange((event, session) => {
+  console.log('onAuthStateChange:', event, 'isSettingPassword:', isSettingPassword);
+  if(isSettingPassword) return;
+});
 
 async function initAuth(){
   console.log('=== initAuth DEBUG ===');
@@ -804,16 +811,18 @@ async function initAuth(){
   const pkcetype = urlParams.get('type'); // 'invite' ou 'recovery'
   if(code){
     try {
+      isSettingPassword = (pkcetype === 'invite' || pkcetype === 'recovery');
       const { error } = await supa.auth.exchangeCodeForSession(code);
       if(!error){
-        // Limpar query string da URL
         window.history.replaceState(null, '', window.location.pathname);
-        if(pkcetype === 'invite' || pkcetype === 'recovery'){
+        if(isSettingPassword){
           showSetPasswordScreen(pkcetype);
           return;
         }
+      } else {
+        isSettingPassword = false;
       }
-    } catch(e){ console.warn('Erro ao trocar código PKCE:', e); }
+    } catch(e){ isSettingPassword = false; console.warn('Erro ao trocar código PKCE:', e); }
   }
 
   // Fluxo implícito: URL tem #access_token=...&type=invite
@@ -831,12 +840,14 @@ async function initAuth(){
     console.log('accessToken prefix:', accessToken?.substring(0, 20));
 
     if(accessToken){
+      isSettingPassword = true;
       const { data, error } = await supa.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken
       });
       console.log('setSession result:', { data: !!data, error: error?.message });
       if(error){
+        isSettingPassword = false;
         showError('Erro ao processar convite: ' + error.message);
         return;
       }
@@ -937,7 +948,8 @@ async function doSetPassword(){
     return;
   }
 
-  // Sucesso — limpar hash e carregar app
+  // Sucesso — liberar flag, limpar hash e carregar app
+  isSettingPassword = false;
   window.history.replaceState(null, '', window.location.pathname);
   const { data: { session } } = await supa.auth.getSession();
   if(session?.user){

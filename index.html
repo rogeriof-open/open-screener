@@ -1238,9 +1238,7 @@ function parseXP(wb){
 
   stores.xp.funds  = funds;
   stores.xp.loaded = true;
-  // Debug: confirm riscoNum types before save
-  const riscoSample = funds.filter(f=>f.riscoNum!=null).slice(0,5);
-  console.log('[XP Save] riscoNum samples:', riscoSample.map(f=>({nome:f.nome, riscoNum:f.riscoNum, type:typeof f.riscoNum})));
+  console.log('[XP Save] primeiros 5 riscoNum:', funds.slice(0,5).map(f => `${f.nome}: riscoNum=${f.riscoNum} (${typeof f.riscoNum})`).join(' | '));
   document.getElementById('cnt-xp').textContent = funds.length.toLocaleString('pt-BR');
   activeTab = 'xp';
   document.getElementById('tab-btg').className = 'tab';

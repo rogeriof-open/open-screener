@@ -25,7 +25,7 @@ if(window.location.hostname.includes('open-screener') ||
   --text:#E8EDF5;--text2:#6B7A99;--text3:#3D4F6E;
   --btg:#4A9EFF;--xp:#FF6830;
   --gold:#FFD700;
-  --sidebar:180px;
+  --sidebar:200px;
   --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
   /* aliases for accent-based references */
   --accent:#00C896;--accent2:#00A878;--accent-dim:rgba(0,200,150,.08);
@@ -141,7 +141,7 @@ input[type=file]{display:none}
 /* ════ SIDEBAR ════ */
 .sidebar{
   width:var(--sidebar);flex-shrink:0;border-right:1px solid var(--border);
-  overflow-y:auto;padding:8px 8px 16px;background:var(--bg);
+  overflow-y:auto;padding:10px 10px 20px;background:var(--bg);
   scrollbar-width:thin;scrollbar-color:var(--border) transparent;
   transition:width .25s ease, padding .25s ease, opacity .2s ease;
 }
@@ -176,29 +176,29 @@ input[type=file]{display:none}
 #btn-sidebar-toggle:hover::before{color:var(--teal)}
 #btn-sidebar-toggle.collapsed::before{content:'›'}
 
-.fs{margin:0;padding:10px 0;border-bottom:1px solid var(--border)}
-.fs:last-of-type{border-bottom:none}
-.fl{font-size:0;width:0;height:0;overflow:hidden;margin:0;padding:0;display:block}
+.fs{margin:14px 0;padding-top:14px;border-top:1px solid var(--border)}
+.fs:first-of-type{margin-top:0;padding-top:0;border-top:none}
+.fl{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:6px;display:block}
 
 .chips{display:flex;flex-wrap:wrap;gap:4px}
 .chip{
-  padding:2px 8px;border-radius:20px;border:1px solid var(--border);
-  background:transparent;color:var(--text2);font-family:var(--font);font-size:11px;
+  padding:4px 10px;border-radius:4px;border:1px solid var(--border);
+  background:var(--bg2);color:#8B9AB5;font-family:var(--font);font-size:12px;
   cursor:pointer;transition:all .12s;white-space:nowrap;
 }
 .chip:hover{border-color:var(--teal);color:var(--teal)}
-.chip.on{background:rgba(0,200,150,.1);border-color:var(--teal);color:var(--teal)}
-.chip.all.on{background:rgba(255,255,255,.04);border-color:var(--border2);color:var(--text)}
+.chip.on{background:rgba(0,200,150,.15);border-color:var(--teal);color:var(--teal)}
+.chip.all.on{background:var(--bg2);border-color:var(--border2);color:var(--text)}
 
 select.fsel{
-  width:100%;padding:4px 22px 4px 7px;border-radius:20px;border:1px solid var(--border);
+  width:100%;padding:5px 24px 5px 8px;border-radius:6px;border:1px solid var(--border);
   background:var(--bg3);color:var(--text);font-family:var(--font);font-size:11px;
   cursor:pointer;appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5 4.5-5z' fill='%233D4F6E'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 7px center;
 }
 .finp{
-  width:100%;padding:3px 7px;border-radius:6px;border:1px solid var(--border);
+  width:100%;padding:4px 7px;border-radius:6px;border:1px solid var(--border);
   background:var(--bg3);color:var(--text);font-family:var(--mono);font-size:11px;text-align:right;
 }
 .finp:focus{outline:none;border-color:var(--teal)}
@@ -211,7 +211,7 @@ input[type=range]{width:100%;cursor:pointer;-webkit-appearance:none;appearance:n
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--teal);cursor:pointer;box-shadow:0 0 6px rgba(0,200,150,.3)}
 input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--teal);cursor:pointer;border:none;box-shadow:0 0 6px rgba(0,200,150,.3)}
 input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:linear-gradient(90deg,var(--teal),var(--teal2))}
-.rval{display:none}
+.rval{font-size:11px;color:var(--text2);font-family:var(--mono);float:right;margin-top:-1px}
 
 /* toggle */
 .tog-row{display:flex;align-items:center;gap:7px}
@@ -226,17 +226,17 @@ input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;ba
 /* CDI box */
 .cdi-box{
   background:rgba(0,200,150,.04);border:1px solid rgba(0,200,150,.15);
-  border-radius:8px;padding:8px 9px;margin-bottom:0;
+  border-radius:8px;padding:8px 9px;margin-bottom:12px;
 }
-.cdi-box .fl{font-size:9px;width:auto;height:auto;overflow:visible;color:var(--teal);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.cdi-box .fl{color:var(--teal)}
 
 .btn-reset{
-  width:100%;margin-top:4px;padding:6px;border-radius:4px;
-  border:none;background:transparent;
-  color:var(--text3);font-family:var(--font);font-size:11px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:4px;transition:color .15s;
+  width:100%;margin-top:6px;padding:7px;border-radius:6px;
+  border:1px solid var(--border);background:transparent;
+  color:var(--text2);font-family:var(--font);font-size:11px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s;
 }
-.btn-reset:hover{color:var(--red)}
+.btn-reset:hover{border-color:var(--red);color:var(--red)}
 
 /* ════ CONTENT ════ */
 .content{flex:1;display:flex;flex-direction:column;overflow:hidden;animation:fadeInUp .3s ease .16s both}
@@ -453,34 +453,38 @@ tr:hover .cnpj-actions{opacity:1}
 #ai-panel.open{transform:translateX(0)}
 .ai-header{
   height:52px;padding:0 16px;
-  background:linear-gradient(135deg,var(--teal),var(--teal2));
+  background:var(--bg2);border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
 }
-.ai-header h3{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px;color:#fff}
+.ai-header h3{font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;color:var(--text)}
+.ai-header-logo{height:18px;opacity:.7}
 .ai-badge{
-  font-size:10px;font-weight:600;letter-spacing:.4px;
-  background:rgba(255,255,255,.2);color:#fff;
-  padding:2px 6px;border-radius:4px;
+  font-size:9px;font-weight:600;letter-spacing:.5px;
+  background:rgba(0,200,150,.12);color:var(--teal);
+  padding:2px 6px;border-radius:4px;text-transform:uppercase;
 }
-.ai-close{background:transparent;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:16px;line-height:1;padding:4px;border-radius:4px;transition:all .15s}
-.ai-close:hover{color:#fff;background:rgba(255,255,255,.1)}
+.ai-close{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;padding:4px;border-radius:4px;transition:all .15s}
+.ai-close:hover{color:var(--text);background:rgba(255,255,255,.05)}
 .ai-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:0;
   scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
-.ai-msg{line-height:1.6;font-size:13px}
-.ai-msg.user{align-self:flex-end;max-width:85%;background:var(--teal-dim);border:1px solid rgba(0,200,150,.2);
+.ai-msg{line-height:1.65;font-size:13px;font-family:var(--font)}
+.ai-msg.user{align-self:flex-end;max-width:85%;background:var(--teal-dim);border:1px solid rgba(0,200,150,.15);
   border-radius:10px 10px 2px 10px;padding:10px 13px;color:var(--text);margin:12px 0}
 .ai-msg.bot{align-self:flex-start;background:transparent;border:none;
-  border-bottom:1px solid rgba(26,38,64,.5);border-radius:0;padding:12px 0;color:var(--text);max-width:100%}
-.ai-msg.bot strong{color:var(--text);font-weight:600}
+  border-bottom:1px solid var(--border);border-radius:0;padding:12px 0;color:#B0BAD0;max-width:100%}
 .ai-msg.bot:last-child{border-bottom:none}
-/* AI rendered content styles */
-.ai-msg.bot .ai-section-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--teal);margin:12px 0 6px;font-weight:600}
-.ai-msg.bot .ai-section-title:first-child{margin-top:0}
+/* AI rendered content */
+.ai-msg.bot p{color:#B0BAD0;font-size:13px;line-height:1.65;margin:6px 0}
+.ai-msg.bot strong{color:var(--text);font-weight:600}
+.ai-msg.bot .ai-h2{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--teal);margin:16px 0 8px;line-height:1}
+.ai-msg.bot .ai-h2:first-child{margin-top:0}
+.ai-msg.bot .ai-h3{font-size:12px;font-weight:500;color:#B0BAD0;margin:12px 0 6px;line-height:1}
 .ai-msg.bot table.ai-table{width:100%;border-collapse:collapse;font-size:11px;margin:8px 0}
 .ai-msg.bot .ai-table th{padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text3);text-transform:uppercase;font-size:10px;font-weight:500;text-align:left}
 .ai-msg.bot .ai-table td{padding:4px 8px;border-bottom:1px solid var(--border);color:var(--text2);font-family:var(--mono);font-size:11px}
-.ai-msg.bot ul,.ai-msg.bot ol{margin:6px 0;padding-left:16px}
-.ai-msg.bot li{color:#B0BAD0;padding:2px 0;font-size:13px}
+.ai-msg.bot ul,.ai-msg.bot ol{margin:6px 0;padding-left:14px}
+.ai-msg.bot li{color:#B0BAD0;font-size:12px;line-height:1.6;margin:2px 0}
+.ai-msg.bot .ai-divider{border:none;border-top:1px solid var(--border);margin:12px 0}
 .ai-msg.thinking{color:var(--text3);font-style:normal;display:flex;align-items:center;gap:8px;padding:12px 0}
 .ai-msg.thinking::after{
   content:'';display:inline-flex;width:24px;height:8px;
@@ -597,7 +601,7 @@ tr:hover .cnpj-actions{opacity:1}
 <div id="ai-panel">
   <div class="ai-header">
     <h3>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <img class="ai-header-logo" src="https://qlyceionzyuaaajwqniy.supabase.co/storage/v1/object/public/assets/logo_branco.png" alt="">
       AI Advisor <span class="ai-badge">BETA</span>
     </h3>
     <button class="ai-close" onclick="toggleAI()">✕</button>
@@ -2051,86 +2055,33 @@ Se a pergunta for genérica ou não envolver recomendação, NÃO inclua o bloco
   input.focus();
 }
 
-function parseAIMarkdown(text){
-  // Split into lines for block-level parsing
-  const lines = text.split('\n');
-  let html = '';
-  let inTable = false;
-  let inList = false;
-  let tableRows = [];
-  let listItems = [];
-
-  function flushTable(){
-    if(!tableRows.length) return '';
+function renderMarkdown(text){
+  // Block-level: tables (multi-line with |)
+  text = text.replace(/((?:^\|.+\|$\n?)+)/gm, function(block){
+    const rows = block.trim().split('\n').filter(r => !/^[\|\s\-:]+$/.test(r));
+    if(!rows.length) return '';
     let t = '<table class="ai-table">';
-    tableRows.forEach((row, i) => {
+    rows.forEach((row, i) => {
       const tag = i === 0 ? 'th' : 'td';
-      const cells = row.split('|').filter(c => c.trim() && !/^[\s-:]+$/.test(c));
+      const cells = row.replace(/^\||\|$/g,'').split('|');
       t += '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
     });
-    t += '</table>';
-    tableRows = [];
-    return t;
-  }
-  function flushList(){
-    if(!listItems.length) return '';
-    const l = '<ul>' + listItems.map(li => `<li>${li}</li>`).join('') + '</ul>';
-    listItems = [];
-    return l;
-  }
-
-  for(let i = 0; i < lines.length; i++){
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    // Table row (contains |)
-    if(trimmed.startsWith('|') && trimmed.endsWith('|')){
-      if(inList){ html += flushList(); inList = false; }
-      // Skip separator rows (|---|---|)
-      if(/^\|[\s\-:]+\|$/.test(trimmed.replace(/\|/g,'|').replace(/[\s\-:]/g,''))) continue;
-      if(/^[\|\s\-:]+$/.test(trimmed)) continue;
-      inTable = true;
-      tableRows.push(trimmed.slice(1,-1)); // strip outer pipes
-      continue;
-    } else if(inTable){
-      html += flushTable();
-      inTable = false;
-    }
-
-    // List item (- or * or numbered)
-    if(/^[\-\*]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed)){
-      if(inTable){ html += flushTable(); inTable = false; }
-      inList = true;
-      const content = trimmed.replace(/^[\-\*]\s+/, '').replace(/^\d+\.\s+/, '');
-      listItems.push(content.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
-      continue;
-    } else if(inList){
-      html += flushList();
-      inList = false;
-    }
-
-    // Header ## or ###
-    if(/^#{2,3}\s+/.test(trimmed)){
-      const title = trimmed.replace(/^#{2,3}\s+/, '');
-      html += `<p class="ai-section-title">${title}</p>`;
-      continue;
-    }
-
-    // Empty line
-    if(!trimmed){ html += '<br>'; continue; }
-
-    // Regular line — apply inline formatting
-    let formatted = trimmed
-      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g,'<em>$1</em>');
-    html += formatted + '<br>';
-  }
-
-  // Flush remaining
-  if(inTable) html += flushTable();
-  if(inList) html += flushList();
-
-  return html;
+    return t + '</table>';
+  });
+  return text
+    // Headers ### → h3, ## → h2
+    .replace(/^### (.+)$/gm, '<p class="ai-h3">$1</p>')
+    .replace(/^## (.+)$/gm, '<p class="ai-h2">$1</p>')
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // List items → <li> then wrap consecutive <li> in <ul>
+    .replace(/^[-•] (.+)$/gm, '<li>$1</li>')
+    .replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
+    // Separators ---
+    .replace(/^---+$/gm, '<hr class="ai-divider">')
+    // Double newlines → paragraph break, single → <br>
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
 }
 
 function addAIMsg(text, cls, id){
@@ -2140,7 +2091,7 @@ function addAIMsg(text, cls, id){
   if(id) div.id = id;
   // Parse markdown for bot messages, simple replace for user
   if(cls.includes('bot') && !cls.includes('thinking')){
-    div.innerHTML = parseAIMarkdown(text);
+    div.innerHTML = renderMarkdown(text);
   } else {
     div.innerHTML = text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
   }

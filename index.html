@@ -2312,7 +2312,7 @@ function exportShared(){
       if(cnt) cnt.textContent = p.btg.length.toLocaleString('pt-BR');
     }
     if(p.xp){
-      stores.xp.funds = p.xp;
+      stores.xp.funds = p.xp.map(f => ({...f, riscoNum: f.riscoNum != null ? parseInt(f.riscoNum, 10) || null : null}));
       stores.xp.loaded = true;
       const cnt = document.getElementById('cnt-xp');
       if(cnt) cnt.textContent = p.xp.length.toLocaleString('pt-BR');

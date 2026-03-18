@@ -1826,10 +1826,25 @@ async function sendAI(){
   // Build context from ALL funds (complete Supabase data)
   const btgFunds = stores.btg.loaded ? stores.btg.funds : [];
   const xpFunds  = stores.xp.loaded  ? stores.xp.funds  : [];
+  const isXPLabel = (label) => label.includes('XP');
+
+  // Classify XP funds by riscoNum thresholds
+  const riscoProfile = (f) => {
+    const r = f.riscoNum;
+    if(r == null) return 'Sem risco';
+    if(r <= 5)  return 'Conservador (risco<=5)';
+    if(r <= 25) return 'Moderado (risco 6-25)';
+    return 'Agressivo (risco>25)';
+  };
+
   const buildContext = (funds, label) => {
     if(!funds.length) return `${label}: Não carregado`;
+    const xp = isXPLabel(label);
 
-    // Group by classificacaoCvm (primary) then by suitability
+    // Debug: log riscoNum types for XP
+    if(xp) console.log('[buildContext XP] primeiros 3:', funds.slice(0,3).map(f=>`${f.nome}: riscoNum=${f.riscoNum} (${typeof f.riscoNum})`).join(' | '));
+
+    // Group by classificacaoCvm (primary)
     const cvmMap = {};
     funds.forEach(f => {
       const cvm = f.classificacaoCvm || f.categoria || 'Outros';
@@ -1842,16 +1857,17 @@ async function sendAI(){
     Object.entries(cvmMap).sort((a,b)=>b[1].length-a[1].length).forEach(([cvm, cfunds]) => {
       ctx += `\n== ClassificacaoCVM: ${cvm} (${cfunds.length} fundos) ==\n`;
 
-      const suitMap = {};
+      // XP: group by risco profile; BTG: group by suitability
+      const groupMap = {};
       cfunds.forEach(f => {
-        const s = f.suitability || 'Geral';
-        if(!suitMap[s]) suitMap[s] = [];
-        suitMap[s].push(f);
+        const key = xp ? riscoProfile(f) : (f.suitability || 'Geral');
+        if(!groupMap[key]) groupMap[key] = [];
+        groupMap[key].push(f);
       });
 
-      Object.entries(suitMap).forEach(([suit, sfunds]) => {
-        const top = [...sfunds].filter(f=>f.ret12m!=null).sort((a,b)=>b.ret12m-a.ret12m).slice(0,5);
-        ctx += `  [${suit} — ${sfunds.length} fundos]\n`;
+      Object.entries(groupMap).forEach(([group, gfunds]) => {
+        const top = [...gfunds].filter(f=>f.ret12m!=null).sort((a,b)=>b.ret12m-a.ret12m).slice(0,5);
+        ctx += `  [${group} — ${gfunds.length} fundos]\n`;
         top.forEach(f => {
           ctx += `    • ${f.nome} | Cat:${f.categoria||'—'} | 12M:${f.ret12m?.toFixed(2)}% | CDI12M:${f.cdi12m!=null?f.cdi12m.toFixed(0)+'%':'—'} | Liq:${f.liquidezStr||'—'} | Trib:${f.tributacao||'—'} | TxAdm:${f.txAdm?.toFixed(2)||'—'}%${f.riscoNum!=null?' | Risco:'+f.riscoNum+' pts':''}\n`;
         });

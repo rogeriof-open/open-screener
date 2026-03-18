@@ -772,7 +772,13 @@ let currentUser = null;
 let userPlan = 'starter'; // 'starter' or 'pro'
 
 async function initAuth(){
+  console.log('=== initAuth DEBUG ===');
+  console.log('hash:', window.location.hash);
+  console.log('href:', window.location.href);
+  console.log('search:', window.location.search);
+
   if(!supa){
+    console.log('supa client is null');
     document.getElementById('login-screen').style.display = 'flex';
     return;
   }

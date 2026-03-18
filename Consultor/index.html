@@ -775,6 +775,19 @@ async function initAuth(){
     return;
   }
 
+  // ── Tratar erros no hash (link expirado, etc.) ──
+  const hashErr = window.location.hash;
+  if(hashErr.includes('error=')){
+    const ep = new URLSearchParams(hashErr.replace('#',''));
+    const errorCode = ep.get('error_code');
+    if(errorCode === 'otp_expired'){
+      showError('Link expirado. Solicite um novo convite ao administrador.');
+    } else {
+      showError('Link inválido. Entre em contato com o suporte.');
+    }
+    return;
+  }
+
   // ── Detectar convite ou recuperação de senha ──
 
   // Fluxo PKCE (Supabase v2 padrão): URL tem ?code=...
@@ -858,6 +871,14 @@ async function doLogout(){
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-pass').value = '';
   document.getElementById('login-err').textContent = '';
+}
+
+function showError(msg){
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('setpw-screen').style.display = 'none';
+  document.getElementById('login-err').textContent = msg;
+  window.history.replaceState(null, '', window.location.pathname);
 }
 
 function showSetPasswordScreen(type){

@@ -1379,6 +1379,23 @@ function resetInputs(){
   if(pp) pp.value = '50';
 }
 
+function applyAIFilters(f){
+  const s = st();
+  // Reset first so previous AI filters don't stack
+  Object.assign(s, mkState());
+  if(f.cat)      s.cat = f.cat;
+  if(f.subcat)   s.subcat = f.subcat;
+  if(Array.isArray(f.suit) && f.suit.length) s.suit = f.suit;
+  if(f.trib)     s.trib = f.trib;
+  if(f.riscoMax != null) s.riscoMax = +f.riscoMax;
+  if(f.maxLiq   != null) s.maxLiq = +f.maxLiq;
+  if(f.sortCol)  s.sortCol = f.sortCol;
+  if(f.sortDir != null) s.sortDir = +f.sortDir;
+  s.page = 1;
+  initSidebar();
+  render();
+}
+
 function resetFilters(){
   const tab = activeTab;
   states[tab] = mkState();
@@ -1870,7 +1887,23 @@ INSTRUÇÕES:
 - SEMPRE verifique se o suitability do fundo é adequado ao perfil perguntado
 - Seja objetivo e prático como um consultor sênior
 - Máximo 250 palavras
-- Use **negrito** para destacar nomes de fundos e métricas importantes`;
+- Use **negrito** para destacar nomes de fundos e métricas importantes
+
+FILTROS DE TABELA (OBRIGATÓRIO em toda resposta de recomendação):
+Ao final de TODA resposta que recomende ou liste fundos, inclua um bloco de filtros oculto no formato EXATO abaixo.
+Este bloco será usado para filtrar a tabela automaticamente. O usuário NÃO vê este bloco.
+Formato: <!--FILTERS:{"key":"value",...}-->
+Chaves disponíveis (inclua APENAS as relevantes, omita as que não se aplicam):
+- "cat": categoria para filtrar (ex: "Renda Fixa", "Multimercado", "Ações"). Na aba BTG é a categoria interna, na aba XP é a classificação CVM.
+- "subcat": subcategoria (ex: "Crédito High Grade", "Macro")
+- "suit": array de suitability (ex: ["Conservador","Moderado"])
+- "trib": tributação (ex: "Isento", "Longo Prazo")
+- "riscoMax": número máximo de pontos de risco XP (ex: 20)
+- "maxLiq": liquidez máxima em dias (ex: 30)
+- "sortCol": coluna para ordenar (ex: "ret12m", "riscoNum", "sharpe12m", "cdi12m")
+- "sortDir": direção da ordenação (1 = crescente, -1 = decrescente)
+Exemplo: <!--FILTERS:{"cat":"Renda Fixa","suit":["Conservador"],"sortCol":"ret12m","sortDir":-1}-->
+Se a pergunta for genérica ou não envolver recomendação, NÃO inclua o bloco FILTERS.`;
 
   console.log('[IA Debug] aba ativa:', activeTab);
   console.log('[IA Debug] btgFunds:', btgFunds.length, '| xpFunds:', xpFunds.length);
@@ -1883,7 +1916,7 @@ INSTRUÇÕES:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system: systemPrompt,
-        max_tokens: 600,
+        max_tokens: 800,
         messages: [{ role: 'user', content: msgWithCtx }]
       })
     });
@@ -1892,7 +1925,16 @@ INSTRUÇÕES:
       document.getElementById(thinkId)?.remove();
       addAIMsg(`Erro API: ${data.error?.message || res.status}`, 'bot');
     } else {
-      const reply = data.content?.[0]?.text || 'Não consegui processar a resposta.';
+      let reply = data.content?.[0]?.text || 'Não consegui processar a resposta.';
+      // Extract and apply FILTERS block if present
+      const fm = reply.match(/<!--FILTERS:(.*?)-->/s);
+      if(fm){
+        reply = reply.replace(/<!--FILTERS:.*?-->/s, '').trim();
+        try {
+          const filters = JSON.parse(fm[1]);
+          applyAIFilters(filters);
+        } catch(e){ console.warn('[IA] FILTERS parse error:', e); }
+      }
       document.getElementById(thinkId)?.remove();
       addAIMsg(reply, 'bot');
     }

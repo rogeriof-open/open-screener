@@ -274,7 +274,7 @@ tr:last-child td{border-bottom:none}
   .no-print{ display:none !important }
   #proposta-preview{ box-shadow:none !important }
 }
-#login-screen{
+#login-screen,#setpw-screen{
   position:fixed;inset:0;z-index:9999;
   background:var(--bg);
   display:flex;align-items:center;justify-content:center;
@@ -459,6 +459,30 @@ tr:hover .cnpj-actions{opacity:1}
     <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-err" id="login-err"></div>
     <div class="login-plan">Acesso restrito · <strong>OpenAdvisor Screener</strong></div>
+  </div>
+</div>
+
+<div id="setpw-screen" style="display:none">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 28 28"><path d="M14 2 L24 7.5 L24 18.5 L19 21.5 L14 26 L9 21.5 L4 18.5 L4 7.5 Z" fill="none" stroke="white" stroke-width="1.8" stroke-linejoin="round"/><circle cx="10" cy="13" r="1.5" fill="white"/><circle cx="14" cy="13" r="1.5" fill="white"/><circle cx="18" cy="13" r="1.5" fill="white"/></svg>
+      </div>
+      <span><em>Open</em>Advisor</span>
+    </div>
+    <div class="login-title" id="setpw-title">Criar sua senha</div>
+    <div class="login-sub" id="setpw-sub">Escolha uma senha para acessar o screener</div>
+    <div class="login-field">
+      <label>Nova Senha</label>
+      <input type="password" id="setpw-pass" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+    </div>
+    <div class="login-field">
+      <label>Confirmar Senha</label>
+      <input type="password" id="setpw-pass2" placeholder="Repita a senha" autocomplete="new-password"
+        onkeydown="if(event.key==='Enter') doSetPassword()">
+    </div>
+    <button class="login-btn" id="setpw-btn" onclick="doSetPassword()">Salvar senha</button>
+    <div class="login-err" id="setpw-err"></div>
   </div>
 </div>
 
@@ -750,6 +774,21 @@ async function initAuth(){
     document.getElementById('login-screen').style.display = 'flex';
     return;
   }
+
+  // Detectar convite ou recuperação de senha via hash
+  const hash = window.location.hash;
+  if(hash.includes('type=invite') || hash.includes('type=recovery')){
+    const params = new URLSearchParams(hash.replace('#',''));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const type = params.get('type');
+    if(accessToken){
+      await supa.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      showSetPasswordScreen(type);
+      return;
+    }
+  }
+
   const { data: { session } } = await supa.auth.getSession();
   if(session?.user){
     currentUser = session.user;
@@ -795,9 +834,54 @@ async function doLogout(){
   if(supa) await supa.auth.signOut();
   currentUser = null;
   document.getElementById('app').style.display = 'none';
+  document.getElementById('setpw-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-pass').value = '';
   document.getElementById('login-err').textContent = '';
+}
+
+function showSetPasswordScreen(type){
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('setpw-screen').style.display = 'flex';
+  document.getElementById('setpw-title').textContent = type === 'invite' ? 'Criar sua senha' : 'Redefinir senha';
+  document.getElementById('setpw-sub').textContent = type === 'invite'
+    ? 'Escolha uma senha para acessar o screener'
+    : 'Digite sua nova senha';
+}
+
+async function doSetPassword(){
+  const pass  = document.getElementById('setpw-pass').value;
+  const pass2 = document.getElementById('setpw-pass2').value;
+  const btn   = document.getElementById('setpw-btn');
+  const err   = document.getElementById('setpw-err');
+
+  err.textContent = '';
+  if(!pass || pass.length < 8){ err.textContent = 'A senha deve ter no mínimo 8 caracteres'; return; }
+  if(pass !== pass2){ err.textContent = 'As senhas não coincidem'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  const { error } = await supa.auth.updateUser({ password: pass });
+
+  if(error){
+    err.textContent = 'Erro ao salvar senha: ' + error.message;
+    btn.disabled = false;
+    btn.textContent = 'Salvar senha';
+    return;
+  }
+
+  // Sucesso — limpar hash e carregar app
+  window.history.replaceState(null, '', window.location.pathname);
+  const { data: { session } } = await supa.auth.getSession();
+  if(session?.user){
+    currentUser = session.user;
+    userPlan = session.user.user_metadata?.plan || 'starter';
+    document.getElementById('setpw-screen').style.display = 'none';
+    showApp();
+    loadFromSupabase();
+  }
 }
 
 function showApp(){

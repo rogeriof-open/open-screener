@@ -1185,12 +1185,24 @@ function parseXP(wb){
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
 
+  // Build column index from header row (case-insensitive, accent-insensitive)
+  const header = rows[0] || [];
+  const colIdx = {};
+  header.forEach((h,i) => { if(h != null) colIdx[String(h).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')] = i; });
+  // Find RISCO_GÊNIO column by name
+  const riscoCol = colIdx['risco_genio'] ?? colIdx['risco genio'] ?? colIdx['risco_gênio'] ?? colIdx['risco gênio'] ?? 21;
+  console.log('[XP Parse] Header:', header.map((h,i)=>i+':'+h).join(' | '));
+  console.log('[XP Parse] RISCO column index:', riscoCol, '| sample values:', rows.slice(1,4).map(r=>r[riscoCol]));
+
   const funds = rows.slice(1).filter(r => r[0]).map(r => {
     const p = v => parseXPPct(v);
     // liquidez = cotização + liquidação
     const cotD = parseLiqD(r[9]);
     const liqD = parseLiqD(r[11]);
     const totalD = (cotD||0) + (liqD||0);
+    // Parse risco as integer
+    const riscoRaw = r[riscoCol];
+    const riscoVal = riscoRaw != null && !isNaN(parseInt(riscoRaw)) ? parseInt(riscoRaw) : null;
     return {
       nome:       str(r[0]),
       cnpj:       str(r[1]),
@@ -1219,8 +1231,8 @@ function parseXP(wb){
       topFunds: false,
       tipo:     str(r[6]),
       captacao: str(r[5]),
-      risco:    r[21] != null && !isNaN(parseFloat(r[21])) ? 'Risco '+parseFloat(r[21]) : null,
-      riscoNum: r[21] != null && !isNaN(parseFloat(r[21])) ? parseFloat(r[21]) : null
+      risco:    riscoVal != null ? 'Risco '+riscoVal : null,
+      riscoNum: riscoVal
     };
   });
 

@@ -1167,6 +1167,7 @@ function parseBTG(wb){
       apMin:    num(r[22]),
       pl:       num(r[53]),
       topFunds: str(r[3]) === 'Sim',
+      classificacaoCvm: str(r[18]),
       tipo:     null, captacao: null, risco: null
     };
   });
@@ -1826,7 +1827,7 @@ async function sendAI(){
         const top = [...sfunds].filter(f=>f.ret12m!=null).sort((a,b)=>b.ret12m-a.ret12m).slice(0,3);
         ctx += `  [${suit} — ${sfunds.length} fundos]\n`;
         top.forEach(f => {
-          ctx += `    • ${f.nome} | 12M:${f.ret12m?.toFixed(2)}% | CDI12M:${f.cdi12m!=null?f.cdi12m.toFixed(0)+'%':'—'} | Liq:${f.liquidezStr||'—'} | Trib:${f.tributacao||'—'} | TxAdm:${f.txAdm?.toFixed(2)||'—'}%${f.riscoNum!=null?' | Risco:'+f.riscoNum+' pts':''}\n`;
+          ctx += `    • ${f.nome} | 12M:${f.ret12m?.toFixed(2)}% | CDI12M:${f.cdi12m!=null?f.cdi12m.toFixed(0)+'%':'—'} | Liq:${f.liquidezStr||'—'} | Trib:${f.tributacao||'—'} | TxAdm:${f.txAdm?.toFixed(2)||'—'}%${f.classificacaoCvm?' | CVM:'+f.classificacaoCvm:''}${f.riscoNum!=null?' | Risco:'+f.riscoNum+' pts':''}\n`;
         });
       });
     });

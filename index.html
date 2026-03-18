@@ -1858,6 +1858,11 @@ INSTRUÇÕES:
 - Máximo 250 palavras
 - Use **negrito** para destacar nomes de fundos e métricas importantes`;
 
+  console.log('[IA Debug] aba ativa:', activeTab);
+  console.log('[IA Debug] btgFunds:', btgFunds.length, '| xpFunds:', xpFunds.length);
+  console.log('[IA Debug] xpFunds com risco:', xpFunds.filter(f=>f.riscoNum!=null).length);
+  console.log('[IA Debug] systemPrompt completo:', systemPrompt);
+
   try {
     const res = await fetch('/api/ai', {
       method: 'POST',

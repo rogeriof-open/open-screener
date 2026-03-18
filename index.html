@@ -568,12 +568,12 @@ tr:hover .cnpj-actions{opacity:1}
     <div class="ai-msg bot">Olá! Sou seu assistente de fundos. Posso analisar os dados carregados e ajudar com recomendações, comparações e análises. Como posso ajudar?</div>
   </div>
   <div class="ai-suggestions" id="ai-sugs">
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra classificacaoCvm = 'Renda Fixa'. Na XP ordena por menor riscoNum. No BTG ordena por suitability Conservador. Top 5 de cada.]">Melhores fundos RF para conservador</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra classificacaoCvm = 'Renda Fixa'. XP: ordena por riscoNum crescente, prioriza riscoNum <= 5. Se não houver fundos com risco <= 5, informa isso e mostra os de menor risco disponível com aviso. BTG: suitability Conservador, ordena por ret12m decrescente. Top 5 cada.]">Melhores fundos RF para conservador</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Liste os top 5 fundos de cada Classificação CVM disponível (Renda Fixa, Multimercado, Ações etc), ordenados por retorno 12M. Inclua pontos de risco para XP.]">Top 5 por categoria CVM</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra fundos com Classificação CVM = Multimercado. Ordena pelos maiores índices Sharpe. Mostra nome, Sharpe, 12M%, CDI12M% e liquidez.]">Top 5 multimercado por Sharpe</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Lista fundos com CDI12M > 115% em ambas as plataformas. Agrupa por Classificação CVM. Inclui liquidez e tributação.]">Fundos com CDI 12M acima de 115%</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra fundos com tributação = Isento ou que contenham CRI/CRA/Infra no nome ou classificação. Compara BTG e XP. Ordena por retorno 12M.]">Fundos com isenção fiscal</button>
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[BTG: suitability Conservador ordenado por 12M decrescente. XP: Pontos de Risco até 10, ordenado por 12M decrescente. Mostra os top 5 de cada plataforma.]">Menor risco e maior retorno</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[BTG: suitability Conservador ordenado por 12M decrescente. XP: Pontos de Risco até 5 (conservador), ordenado por 12M decrescente. Mostra os top 5 de cada plataforma.]">Menor risco e maior retorno</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Sugere alocação para R$ 100.000 perfil conservador: propõe % em cada categoria CVM (RF, Multimercado baixa vol etc), com fundos específicos de BTG e XP, considerando liquidez mínima D+30 e tributação eficiente.]">Monte carteira para R$ 100mil conservador</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra fundos de Crédito Privado/High Grade/High Yield em ambas as plataformas. Compara retorno 12M, CDI12M%, liquidez, taxa adm e risco. Aponta qual plataforma tem melhores opções.]">Compare BTG vs XP em crédito privado</button>
   </div>
@@ -1862,6 +1862,10 @@ REGRA CRÍTICA — CLASSIFICAÇÃO CVM:
 Quando o usuário mencionar RF, Renda Fixa ou quiser fundos de renda fixa, filtre EXCLUSIVAMENTE por classificacaoCvm = 'Renda Fixa'.
 Ignore categorias internas como 'Crédito Liquidez', 'High Grade', 'Crédito Estruturado' etc para determinar se é renda fixa — use APENAS o campo classificacaoCvm.
 O mesmo vale para Multimercado, Ações, Cambial etc: sempre use classificacaoCvm como filtro primário.
+
+REGRA CRÍTICA — PONTOS DE RISCO XP:
+Escala de risco XP: Conservador = até 5 pts, Moderado = 6-25 pts, Agressivo = acima de 25 pts.
+NUNCA recomendar como conservador fundos com riscoNum > 5 sem aviso explícito.
 
 ${buildContext(btgFunds, 'BTG PACTUAL')}
 

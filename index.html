@@ -1869,7 +1869,15 @@ async function sendAI(){
         const top = [...gfunds].filter(f=>f.ret12m!=null).sort((a,b)=>b.ret12m-a.ret12m).slice(0,5);
         ctx += `  [${group} — ${gfunds.length} fundos]\n`;
         top.forEach(f => {
-          ctx += `    • ${f.nome} | Cat:${f.categoria||'—'} | 12M:${f.ret12m?.toFixed(2)}% | CDI12M:${f.cdi12m!=null?f.cdi12m.toFixed(0)+'%':'—'} | Liq:${f.liquidezStr||'—'} | Trib:${f.tributacao||'—'} | TxAdm:${f.txAdm?.toFixed(2)||'—'}%${f.riscoNum!=null?' | Risco:'+f.riscoNum+' pts':''}\n`;
+          const trib = f.tributacao || '';
+          const isento = trib.toLowerCase().includes('isento');
+          const tribLabel = isento ? 'Isento ✅' : trib.includes('Longo') ? 'LP' : trib.includes('Curto') ? 'CP' : (trib||'—');
+          const ret = f.ret12m?.toFixed(2);
+          const retGross = isento && f.ret12m != null ? ' (≈'+(f.ret12m/0.85).toFixed(2)+'% gross)' : '';
+          const cdi = f.cdi12m != null ? f.cdi12m.toFixed(0)+'%' : '—';
+          const cdiGross = isento && f.cdi12m != null ? ' (≈'+(f.cdi12m/0.85).toFixed(0)+'% gross)' : '';
+          const risco = xp ? (f.riscoNum!=null ? ' | Risco: '+f.riscoNum+' pts' : '') : ' | Perfil: '+(f.suitability||'—');
+          ctx += `    • ${f.nome} | 12M: ${ret}%${retGross} | CDI12M: ${cdi}${cdiGross} | Liq: ${f.liquidezStr||'—'}${risco} | Trib: ${tribLabel}\n`;
         });
       });
     });

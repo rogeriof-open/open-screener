@@ -1829,7 +1829,7 @@ async function sendAI(){
   const isXPLabel = (label) => label.includes('XP');
 
   // Infer tax-exempt status from fund name/category
-  const _isentoRx = /incentiva|debenture|debênture|infra|[\b\s]cri[\b\s]|[\b\s]cra[\b\s]|[\b\s]lci[\b\s]|[\b\s]lca[\b\s]|fundimob|imobili[aá]rio|fiagro/i;
+  const _isentoRx = /incentiva|debenture|debênture|infra|\bcri\b|\bcra\b|\blci\b|\blca\b|fundimob|imobili[aá]rio|fiagro/i;
   const isIsento = (f) => {
     const txt = (f.nome||'') + ' ' + (f.categoria||'') + ' ' + (f.subcategoria||'');
     return _isentoRx.test(txt);
@@ -1882,7 +1882,14 @@ async function sendAI(){
           const cdi = f.cdi12m != null ? f.cdi12m.toFixed(0)+'%' : '—';
           const cdiGross = exempt && f.cdi12m != null ? ' (≈'+(f.cdi12m/0.85).toFixed(0)+'% gross)' : '';
           const risco = xp ? (f.riscoNum!=null ? ' | Risco: '+f.riscoNum+' pts' : '') : ' | Suitability: '+(f.suitability||'—');
-          const tribPart = exempt ? ' | Trib: Isento ✅' : '';
+          // BTG: isento → Isento ✅ + grossup; não isento → mostra tributacao (LP/CP)
+          // XP: isento → Isento ✅ + grossup; não isento → omite Trib
+          let tribPart = '';
+          if(exempt) { tribPart = ' | Trib: Isento ✅'; }
+          else if(!xp && f.tributacao) {
+            const t = f.tributacao;
+            tribPart = ' | Trib: '+(t.includes('Longo')?'LP':t.includes('Curto')?'CP':t);
+          }
           ctx += `    • ${f.nome} | 12M: ${ret}%${retGross} | CDI12M: ${cdi}${cdiGross} | Liq: ${f.liquidezStr||'—'}${risco}${tribPart}\n`;
         });
       });

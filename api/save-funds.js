@@ -11,6 +11,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('save-funds: SUPABASE_SERVICE_ROLE_KEY não configurada nas variáveis de ambiente');
+    return res.status(500).json({ error: 'Server misconfiguration: missing SUPABASE_SERVICE_ROLE_KEY' });
+  }
+
   try {
     const { table, data } = req.body;
 

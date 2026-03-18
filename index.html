@@ -568,7 +568,7 @@ tr:hover .cnpj-actions{opacity:1}
     <div class="ai-msg bot">Olá! Sou seu assistente de fundos. Posso analisar os dados carregados e ajudar com recomendações, comparações e análises. Como posso ajudar?</div>
   </div>
   <div class="ai-suggestions" id="ai-sugs">
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Perfil conservador. BTG: suitability=Conservador, ordena por ret12m desc, top 5. XP: riscoNum <= 5, classif CVM Renda Fixa, ordena por ret12m desc, top 5. Mostra nome, 12M%, CDI12M%, liquidez, tributação e risco.]">Top fundos conservador</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Perfil conservador. BTG: suitability=Conservador, ordena por ret12m desc, top 5. XP: filtra classificacaoCvm ou categoria contendo 'Renda Fixa', ordena por riscoNum crescente (menor risco primeiro), top 5. Mostra nome, 12M%, CDI12M%, liquidez, tributação e riscoNum.]">Top fundos conservador</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Perfil moderado. BTG: suitability=Moderado, ordena por ret12m desc, top 5. XP: riscoNum 6-25, todas classif CVM, ordena por ret12m desc, top 5.]">Top fundos moderado</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Perfil arrojado. BTG: suitability=Sofisticado, ordena por ret12m desc, top 5. XP: riscoNum > 25, ordena por ret12m desc, top 5.]">Top fundos arrojado</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Liste top 5 de cada classificacaoCvm disponível, ordenados por ret12m. Separa BTG e XP. Inclui pontos de risco para XP.]">Top 5 por categoria CVM</button>
@@ -1793,35 +1793,9 @@ async function sendAI(){
   const thinkId = 'think-' + Date.now();
   addAIMsg('Analisando os dados...', 'bot thinking', thinkId);
 
-  // Build context from FILTERED funds (respects sidebar filters)
-  const btgFunds = stores.btg.loaded ? getFiltered('btg') : [];
-  const xpFunds  = stores.xp.loaded  ? getFiltered('xp')  : [];
-  const btgTotal = stores.btg.loaded ? stores.btg.funds.length : 0;
-  const xpTotal  = stores.xp.loaded  ? stores.xp.funds.length  : 0;
-
-  // Describe active filters for the AI
-  const describeFilters = (tab) => {
-    const s = states[tab];
-    const parts = [];
-    if(s.cat)           parts.push('Categoria: '+s.cat);
-    if(s.subcat)        parts.push('Subcategoria: '+s.subcat);
-    if(s.suit.length)   parts.push('Suitability: '+s.suit.join(', '));
-    if(s.trib)          parts.push('Tributação: '+s.trib);
-    if(s.captacao)      parts.push('Captação: '+s.captacao);
-    if(s.maxLiq < 366)  parts.push('Liquidez máx: D+'+s.maxLiq);
-    if(s.r12Min!=null)  parts.push('Ret 12M mín: '+s.r12Min+'%');
-    if(s.r12Max!=null)  parts.push('Ret 12M máx: '+s.r12Max+'%');
-    if(s.cdi12Min!=null) parts.push('CDI 12M mín: '+s.cdi12Min+'%');
-    if(s.volMax!=null)  parts.push('Vol máx: '+s.volMax+'%');
-    if(s.sharpeMin!=null) parts.push('Sharpe mín: '+s.sharpeMin);
-    if(s.apMinMax!=null) parts.push('Apl mín máx: R$'+s.apMinMax);
-    if(s.riscoMax!=null) parts.push('Risco máx: '+s.riscoMax+' pts');
-    if(s.topOnly)       parts.push('Apenas Top Funds');
-    if(s.search)        parts.push('Busca: "'+s.search+'"');
-    return parts.length ? parts.join(' | ') : 'Nenhum filtro ativo';
-  };
-
-  const filtered = getFiltered(activeTab);
+  // Build context from ALL funds (complete Supabase data)
+  const btgFunds = stores.btg.loaded ? stores.btg.funds : [];
+  const xpFunds  = stores.xp.loaded  ? stores.xp.funds  : [];
   const buildContext = (funds, label) => {
     if(!funds.length) return `${label}: Não carregado`;
 
@@ -1833,7 +1807,7 @@ async function sendAI(){
       cvmMap[cvm].push(f);
     });
 
-    let ctx = `${label} (${funds.length} fundos após filtros)\n`;
+    let ctx = `${label} (${funds.length} fundos total)\n`;
 
     Object.entries(cvmMap).sort((a,b)=>b[1].length-a[1].length).forEach(([cvm, cfunds]) => {
       ctx += `\n== ClassificacaoCVM: ${cvm} (${cfunds.length} fundos) ==\n`;
@@ -1880,20 +1854,18 @@ Ignore categorias internas como 'Crédito Liquidez', 'High Grade', 'Crédito Est
 O mesmo vale para Multimercado, Ações, Cambial etc: sempre use classificacaoCvm como filtro primário.
 
 REGRA CRÍTICA — PONTOS DE RISCO XP:
-Escala de risco XP: Conservador = até 5 pts, Moderado = 6-25 pts, Agressivo = acima de 25 pts.
-NUNCA recomendar como conservador fundos com riscoNum > 5 sem aviso explícito.
-
-FILTROS ATIVOS BTG: ${describeFilters('btg')} (${btgFunds.length} de ${btgTotal} fundos)
-FILTROS ATIVOS XP: ${describeFilters('xp')} (${xpFunds.length} de ${xpTotal} fundos)
+- Escala de 1 a 100 pontos (não 1-10)
+- Na XP NÃO existe threshold fixo de "conservador". O critério é RELATIVO: menor riscoNum disponível.
+- Para perfil conservador na XP: filtre classificacaoCvm ou categoria contendo 'Renda Fixa', ordene por riscoNum crescente, recomende os de menor risco.
+- Moderado: riscoNum intermediário (tipicamente 15-35 pts)
+- Agressivo: riscoNum alto (acima de 35 pts)
 
 ${buildContext(btgFunds, 'BTG PACTUAL')}
 
 ${buildContext(xpFunds, 'XP INVESTIMENTOS')}
 
-ABA ATIVA: ${activeTab.toUpperCase()} (${filtered.length} fundos visíveis na tabela)
-
 INSTRUÇÕES:
-- Responda APENAS com base nos fundos filtrados acima (que o usuário está vendo na tela)
+- Responda sempre com base nos dados reais acima
 - Ao recomendar fundos, cite nome, retorno 12M, CDI 12M, liquidez e suitability
 - SEMPRE verifique se o suitability do fundo é adequado ao perfil perguntado
 - Seja objetivo e prático como um consultor sênior

@@ -568,10 +568,14 @@ tr:hover .cnpj-actions{opacity:1}
     <div class="ai-msg bot">Olá! Sou seu assistente de fundos. Posso analisar os dados carregados e ajudar com recomendações, comparações e análises. Como posso ajudar?</div>
   </div>
   <div class="ai-suggestions" id="ai-sugs">
-    <button class="ai-sug" onclick="aiSuggest(this)">Melhores fundos RF para conservador</button>
-    <button class="ai-sug" onclick="aiSuggest(this)">Top 5 multimercado por Sharpe</button>
-    <button class="ai-sug" onclick="aiSuggest(this)">Fundos com CDI 12M acima de 115%</button>
-    <button class="ai-sug" onclick="aiSuggest(this)">Compare BTG vs XP em crédito privado</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[RF = Classificação CVM 'Renda Fixa'. Conservador = suitability Conservador no BTG ou Pontos de Risco até 5 na XP. Mostrar nome, 12M%, CDI12M%, liquidez, tributação e risco.]">Melhores fundos RF para conservador</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Liste os top 5 fundos de cada Classificação CVM disponível (Renda Fixa, Multimercado, Ações etc), ordenados por retorno 12M. Inclua pontos de risco para XP.]">Top 5 por categoria CVM</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra fundos com Classificação CVM = Multimercado. Ordena pelos maiores índices Sharpe. Mostra nome, Sharpe, 12M%, CDI12M% e liquidez.]">Top 5 multimercado por Sharpe</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Lista fundos com CDI12M > 115% em ambas as plataformas. Agrupa por Classificação CVM. Inclui liquidez e tributação.]">Fundos com CDI 12M acima de 115%</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra fundos com tributação = Isento ou que contenham CRI/CRA/Infra no nome ou classificação. Compara BTG e XP. Ordena por retorno 12M.]">Fundos com isenção fiscal</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[BTG: suitability Conservador ordenado por 12M decrescente. XP: Pontos de Risco até 10, ordenado por 12M decrescente. Mostra os top 5 de cada plataforma.]">Menor risco e maior retorno</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Sugere alocação para R$ 100.000 perfil conservador: propõe % em cada categoria CVM (RF, Multimercado baixa vol etc), com fundos específicos de BTG e XP, considerando liquidez mínima D+30 e tributação eficiente.]">Monte carteira para R$ 100mil conservador</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra fundos de Crédito Privado/High Grade/High Yield em ambas as plataformas. Compara retorno 12M, CDI12M%, liquidez, taxa adm e risco. Aponta qual plataforma tem melhores opções.]">Compare BTG vs XP em crédito privado</button>
   </div>
   <div class="ai-input-row">
     <textarea class="ai-input" id="ai-input" placeholder="Pergunte sobre os fundos..." rows="1"
@@ -1758,7 +1762,9 @@ function toggleAI(){
   document.getElementById('btn-ai').classList.toggle('on', aiOpen);
 }
 
+let _sugCtx = '';
 function aiSuggest(btn){
+  _sugCtx = btn.dataset.ctx || '';
   document.getElementById('ai-input').value = btn.textContent;
   sendAI();
 }
@@ -1775,11 +1781,13 @@ async function sendAI(){
   // Add user message (original, without context tag)
   addAIMsg(msg, 'user');
 
-  // Append active tab context to the prompt sent to the API
+  // Append active tab context + suggestion context to the prompt sent to the API
   const tabCtx = activeTab === 'xp'
     ? '\n[Contexto: usuário está vendo a aba XP Investimentos. Responda com base nos fundos XP, mencionando o Ponto de Risco de cada fundo recomendado.]'
     : '\n[Contexto: usuário está vendo a aba BTG Pactual.]';
-  const msgWithCtx = msg + tabCtx;
+  const sugCtx = _sugCtx ? '\n' + _sugCtx : '';
+  _sugCtx = '';
+  const msgWithCtx = msg + tabCtx + sugCtx;
 
   // Add thinking indicator
   const thinkId = 'think-' + Date.now();

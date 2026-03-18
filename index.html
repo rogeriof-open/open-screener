@@ -568,7 +568,7 @@ tr:hover .cnpj-actions{opacity:1}
     <div class="ai-msg bot">Olá! Sou seu assistente de fundos. Posso analisar os dados carregados e ajudar com recomendações, comparações e análises. Como posso ajudar?</div>
   </div>
   <div class="ai-suggestions" id="ai-sugs">
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Perfil conservador. BTG: suitability=Conservador, ordena por ret12m desc, top 5. XP: filtra classificacaoCvm ou categoria contendo 'Renda Fixa', ordena por riscoNum crescente (menor risco primeiro), top 5. Mostra nome, 12M%, CDI12M%, liquidez, tributação e riscoNum.]">Top fundos conservador</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Perfil conservador. BTG: suitability=Conservador, ordena por ret12m desc, top 5. XP: riscoNum <= 5, ordena por ret12m desc, top 5. Mostra nome, 12M%, CDI12M%, liquidez, tributação e riscoNum.]">Top fundos conservador</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Perfil moderado. BTG: suitability=Moderado, ordena por ret12m desc, top 5. XP: riscoNum 6-25, todas classif CVM, ordena por ret12m desc, top 5.]">Top fundos moderado</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Perfil arrojado. BTG: suitability=Sofisticado, ordena por ret12m desc, top 5. XP: riscoNum > 25, ordena por ret12m desc, top 5.]">Top fundos arrojado</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Liste top 5 de cada classificacaoCvm disponível, ordenados por ret12m. Separa BTG e XP. Inclui pontos de risco para XP.]">Top 5 por categoria CVM</button>
@@ -1882,12 +1882,12 @@ Quando o usuário mencionar RF, Renda Fixa ou quiser fundos de renda fixa, filtr
 Ignore categorias internas como 'Crédito Liquidez', 'High Grade', 'Crédito Estruturado' etc para determinar se é renda fixa — use APENAS o campo classificacaoCvm.
 O mesmo vale para Multimercado, Ações, Cambial etc: sempre use classificacaoCvm como filtro primário.
 
-REGRA CRÍTICA — PONTOS DE RISCO XP:
-- Escala de 1 a 100 pontos (não 1-10)
-- Na XP NÃO existe threshold fixo de "conservador". O critério é RELATIVO: menor riscoNum disponível.
-- Para perfil conservador na XP: filtre classificacaoCvm ou categoria contendo 'Renda Fixa', ordene por riscoNum crescente, recomende os de menor risco.
-- Moderado: riscoNum intermediário (tipicamente 15-35 pts)
-- Agressivo: riscoNum alto (acima de 35 pts)
+REGRA CRÍTICA — PONTOS DE RISCO XP (campo 'riscoNum' — valor INTEIRO):
+- Escala de 1 a 100 pontos
+- Conservador: riscoNum <= 5
+- Moderado: riscoNum 6 a 25
+- Agressivo: riscoNum > 25
+Use ESTES thresholds fixos para classificar fundos XP por perfil de risco.
 
 ${buildContext(btgFunds, 'BTG PACTUAL')}
 

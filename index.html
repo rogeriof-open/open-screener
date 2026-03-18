@@ -2074,7 +2074,7 @@ function showPropostaBtn(){
   const btn = document.getElementById('btn-proposta');
   if(btn) btn.style.display = isPro() ? '' : 'none';
 }
-function str(v){ return v != null ? String(v).trim() : ""; }
+function str(v) { return v != null && v !== undefined ? String(v).trim() : null; }
 function num(v){ return v != null && !isNaN(+v) ? +v : null; }
 function parseLiqD(v){
   if(v == null) return null;

@@ -775,7 +775,27 @@ async function initAuth(){
     return;
   }
 
-  // Detectar convite ou recuperação de senha via hash
+  // ── Detectar convite ou recuperação de senha ──
+
+  // Fluxo PKCE (Supabase v2 padrão): URL tem ?code=...
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  const pkcetype = urlParams.get('type'); // 'invite' ou 'recovery'
+  if(code){
+    try {
+      const { error } = await supa.auth.exchangeCodeForSession(code);
+      if(!error){
+        // Limpar query string da URL
+        window.history.replaceState(null, '', window.location.pathname);
+        if(pkcetype === 'invite' || pkcetype === 'recovery'){
+          showSetPasswordScreen(pkcetype);
+          return;
+        }
+      }
+    } catch(e){ console.warn('Erro ao trocar código PKCE:', e); }
+  }
+
+  // Fluxo implícito legado: URL tem #access_token=...&type=invite
   const hash = window.location.hash;
   if(hash.includes('type=invite') || hash.includes('type=recovery')){
     const params = new URLSearchParams(hash.replace('#',''));

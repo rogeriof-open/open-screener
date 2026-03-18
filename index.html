@@ -1427,7 +1427,10 @@ function getFiltered(tab){
     if(s.cat     && f.categoria    !== s.cat)     return false;
     if(s.subcat  && f.subcategoria !== s.subcat)  return false;
     if(s.suit.length > 0 && !s.suit.includes(f.suitability)) return false;
-    if(s.trib    && f.tributacao   !== s.trib)    return false;
+    if(s.trib) {
+      if(s.trib === 'Isento') { if(!isIsentoGlobal(f)) return false; }
+      else if(f.tributacao !== s.trib) return false;
+    }
     if(s.captacao && f.captacao    !== s.captacao) return false;
     if(s.maxLiq < 366 && (f.liquidezD == null || f.liquidezD > s.maxLiq)) return false;
     if(s.r12Min  != null && (f.ret12m == null || f.ret12m < s.r12Min))  return false;
@@ -1823,9 +1826,7 @@ async function sendAI(){
   addAIMsg(msg, 'user');
 
   // Append active tab context + suggestion context to the prompt sent to the API
-  const tabCtx = activeTab === 'xp'
-    ? '\n[Contexto: usuário está vendo a aba XP Investimentos. Responda com base nos fundos XP, mencionando o Ponto de Risco de cada fundo recomendado.]'
-    : '\n[Contexto: usuário está vendo a aba BTG Pactual.]';
+  const tabCtx = '\n[Contexto: inclua fundos de AMBAS as plataformas (BTG e XP) na resposta. Cada fundo está marcado com [BTG] ou [XP]. Para fundos XP, sempre mencione o Ponto de Risco.]';
   const sugCtx = _sugCtx ? '\n' + _sugCtx : '';
   _sugCtx = '';
   const msgWithCtx = msg + tabCtx + sugCtx;
@@ -1834,9 +1835,10 @@ async function sendAI(){
   const thinkId = 'think-' + Date.now();
   addAIMsg('Analisando os dados...', 'bot thinking', thinkId);
 
-  // Build context from ALL funds (complete Supabase data)
-  const btgFunds = stores.btg.loaded ? stores.btg.funds : [];
-  const xpFunds  = stores.xp.loaded  ? stores.xp.funds  : [];
+  // Build context from ALL funds — tag each with source
+  const btgFunds = stores.btg.loaded ? stores.btg.funds.map(f=>({...f, _src:'BTG'})) : [];
+  const xpFunds  = stores.xp.loaded  ? stores.xp.funds.map(f=>({...f, _src:'XP'}))   : [];
+  const allFunds = [...btgFunds, ...xpFunds];
   const isXPLabel = (label) => label.includes('XP');
 
   // Infer tax-exempt status from fund name/category
@@ -1897,7 +1899,8 @@ async function sendAI(){
             const t = f.tributacao;
             tribPart = ' | Trib: '+(t.includes('Longo')?'LP':t.includes('Curto')?'CP':t);
           }
-          ctx += `    • ${f.nome} | 12M: ${ret}%${retGross} | CDI12M: ${cdi}${cdiGross} | Liq: ${f.liquidezStr||'—'}${risco}${tribPart}\n`;
+          const src = f._src ? ' ['+f._src+']' : '';
+          ctx += `    • ${f.nome}${src} | 12M: ${ret}%${retGross} | CDI12M: ${cdi}${cdiGross} | Liq: ${f.liquidezStr||'—'}${risco}${tribPart}\n`;
         });
       });
     });

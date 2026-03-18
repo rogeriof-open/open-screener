@@ -820,13 +820,23 @@ async function initAuth(){
   const hash = window.location.hash;
   if(hash.includes('type=invite') || hash.includes('type=recovery')){
     const params = new URLSearchParams(hash.substring(1));
+    const type = params.get('type');
     const accessToken = params.get('access_token');
     const refreshToken = params.get('refresh_token');
-    const type = params.get('type');
+
+    console.log('=== INVITE/RECOVERY FLOW ===');
+    console.log('type:', type);
+    console.log('accessToken exists:', !!accessToken);
+    console.log('refreshToken exists:', !!refreshToken);
+    console.log('accessToken prefix:', accessToken?.substring(0, 20));
+
     if(accessToken){
-      const { error } = await supa.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      const { data, error } = await supa.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+      console.log('setSession result:', { data: !!data, error: error?.message });
       if(error){
-        console.error('setSession error:', error);
         showError('Erro ao processar convite: ' + error.message);
         return;
       }

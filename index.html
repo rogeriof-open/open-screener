@@ -1423,6 +1423,12 @@ function resetFilters(){
 function getFiltered(tab){
   const s = states[tab];
   const funds = stores[tab].funds;
+  if(funds.length && s.suit.length > 0){
+    console.log('[getFiltered] tab:', tab, '| suit filter:', JSON.stringify(s.suit),
+      '| first 3 suitability:', funds.slice(0,3).map(f=>f.suitability),
+      '| total funds:', funds.length,
+      '| match:', funds.filter(f=>s.suit.includes(f.suitability)).length);
+  }
   return funds.filter(f => {
     if(s.cat     && f.categoria    !== s.cat)     return false;
     if(s.subcat  && f.subcategoria !== s.subcat)  return false;

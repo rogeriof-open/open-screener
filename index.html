@@ -940,8 +940,8 @@ function isPro(){ return userPlan === 'pro' || SKIP_AUTH; }
 async function fetchCDI(){
   try {
     const [resYtd, res12m] = await Promise.all([
-      fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.4391/dados/ultimos/1?formato=json'),
-      fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.4392/dados/ultimos/1?formato=json')
+      fetch('/api/cdi-ytd'),
+      fetch('/api/cdi-12m')
     ]);
     const [dataYtd, data12m] = await Promise.all([resYtd.json(), res12m.json()]);
     if(dataYtd && dataYtd[0]){

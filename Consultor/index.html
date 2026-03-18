@@ -824,67 +824,26 @@ function isPro(){ return userPlan === 'pro'; }
 // ══════════════════════════════════════════════
 async function fetchCDI(){
   try {
-    // CDI acumulado no ano (serie 4391 = CDI diario anualizado, 4392 = CDI mensal)
-    // Use serie 4391 for daily CDI rate, then compute YTD accumulation
-    const now = new Date();
-    const year = now.getFullYear();
-    const startDate = '01/01/' + year;
-    const endDate = now.toLocaleDateString('pt-BR');
-
-    // Fetch daily CDI rates for the year
-    const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${startDate}&dataFinal=${endDate}`;
-    const res = await fetch(url);
-    if(!res.ok) return;
-    const data = await res.json();
-    if(!data || !data.length) return;
-
-    // Accumulate daily rates to get YTD CDI
-    let accum = 1;
-    data.forEach(d => {
-      const rate = parseFloat(d.valor.replace(',', '.'));
-      accum *= (1 + rate / 100);
-    });
-    const cdiYtd = (accum - 1) * 100;
-
-    // Also compute CDI 12M: fetch last 12 months
-    const past = new Date();
-    past.setFullYear(past.getFullYear() - 1);
-    const startDate12 = past.toLocaleDateString('pt-BR');
-    const url12 = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${startDate12}&dataFinal=${endDate}`;
-    const res12 = await fetch(url12);
-    if(res12.ok){
-      const data12 = await res12.json();
-      if(data12 && data12.length){
-        let accum12 = 1;
-        data12.forEach(d => {
-          const rate = parseFloat(d.valor.replace(',', '.'));
-          accum12 *= (1 + rate / 100);
-        });
-        const cdi12m = (accum12 - 1) * 100;
-
-        // Fill CDI 12M input if exists
-        const inp12 = document.getElementById('inp-cdi-12m-ref');
-        if(inp12 && !inp12.value){
-          inp12.value = cdi12m.toFixed(2);
-          // Set for both tabs
-          states.btg.cdi12mRef = cdi12m;
-          states.xp.cdi12mRef = cdi12m;
-        }
-      }
+    const [resYtd, res12m] = await Promise.all([
+      fetch('/api/cdi-ytd'),
+      fetch('/api/cdi-12m')
+    ]);
+    const [dataYtd, data12m] = await Promise.all([resYtd.json(), res12m.json()]);
+    if(dataYtd && dataYtd[0]){
+      const val = parseFloat(dataYtd[0].valor.replace(',','.'));
+      const inp = document.getElementById('inp-cdi-ytd');
+      if(inp){ inp.value = val; inp.dispatchEvent(new Event('input')); }
+      const lbl = document.querySelector('#cdi-ytd-box .fl');
+      if(lbl) lbl.innerHTML = 'CDI Acumulado Ano (%) <span style="font-size:9px;color:var(--text3)">(' + dataYtd[0].data + ')</span>';
     }
-
-    // Fill CDI YTD input if exists
-    const inpYtd = document.getElementById('inp-cdi-ytd');
-    if(inpYtd && !inpYtd.value){
-      inpYtd.value = cdiYtd.toFixed(2);
-      states.btg.cdiYtd = cdiYtd;
-      states.xp.cdiYtd = cdiYtd;
+    if(data12m && data12m[0]){
+      const val = parseFloat(data12m[0].valor.replace(',','.'));
+      const inp = document.getElementById('inp-cdi-12m-ref');
+      if(inp){ inp.value = val; inp.dispatchEvent(new Event('input')); }
+      const lbl = document.querySelector('#cdi-12m-xp-box .fl');
+      if(lbl) lbl.innerHTML = 'CDI Acumulado 12M (%) <span style="font-size:9px;color:var(--text3)">(' + data12m[0].data + ')</span>';
     }
-
-    console.log('CDI BACEN loaded: YTD=' + cdiYtd.toFixed(2) + '%');
-  } catch(e){
-    console.warn('Erro ao buscar CDI do BACEN:', e);
-  }
+  } catch(e){ console.warn('Erro ao buscar CDI do BACEN:', e); }
 }
 
 // Start auth and fetch CDI on load

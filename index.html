@@ -1219,8 +1219,8 @@ function parseXP(wb){
       topFunds: false,
       tipo:     str(r[6]),
       captacao: str(r[5]),
-      risco:    r[21] != null ? 'Risco '+r[21] : null,
-      riscoNum: r[21] != null ? +r[21] : null
+      risco:    r[21] != null && !isNaN(parseFloat(r[21])) ? 'Risco '+parseFloat(r[21]) : null,
+      riscoNum: r[21] != null && !isNaN(parseFloat(r[21])) ? parseFloat(r[21]) : null
     };
   });
 

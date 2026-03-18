@@ -1772,8 +1772,14 @@ async function sendAI(){
   const btn = document.getElementById('ai-send-btn');
   btn.disabled = true;
 
-  // Add user message
+  // Add user message (original, without context tag)
   addAIMsg(msg, 'user');
+
+  // Append active tab context to the prompt sent to the API
+  const tabCtx = activeTab === 'xp'
+    ? '\n[Contexto: usuário está vendo a aba XP Investimentos. Responda com base nos fundos XP, mencionando o Ponto de Risco de cada fundo recomendado.]'
+    : '\n[Contexto: usuário está vendo a aba BTG Pactual.]';
+  const msgWithCtx = msg + tabCtx;
 
   // Add thinking indicator
   const thinkId = 'think-' + Date.now();
@@ -1870,7 +1876,7 @@ INSTRUÇÕES:
       body: JSON.stringify({
         system: systemPrompt,
         max_tokens: 600,
-        messages: [{ role: 'user', content: msg }]
+        messages: [{ role: 'user', content: msgWithCtx }]
       })
     });
     const data = await res.json();

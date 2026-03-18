@@ -833,6 +833,7 @@ async function fetchCDI(){
       const val = parseFloat(dataYtd[0].valor.replace(',','.'));
       const inp = document.getElementById('inp-cdi-ytd');
       if(inp){ inp.value = val; inp.dispatchEvent(new Event('input')); }
+      states.btg.cdiYtd = val; states.xp.cdiYtd = val;
       const lbl = document.querySelector('#cdi-ytd-box .fl');
       if(lbl) lbl.innerHTML = 'CDI Acumulado Ano (%) <span style="font-size:9px;color:var(--text3)">(' + dataYtd[0].data + ')</span>';
     }
@@ -840,6 +841,7 @@ async function fetchCDI(){
       const val = parseFloat(data12m[0].valor.replace(',','.'));
       const inp = document.getElementById('inp-cdi-12m-ref');
       if(inp){ inp.value = val; inp.dispatchEvent(new Event('input')); }
+      states.btg.cdi12mRef = val; states.xp.cdi12mRef = val;
       const lbl = document.querySelector('#cdi-12m-xp-box .fl');
       if(lbl) lbl.innerHTML = 'CDI Acumulado 12M (%) <span style="font-size:9px;color:var(--text3)">(' + data12m[0].data + ')</span>';
     }

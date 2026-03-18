@@ -837,10 +837,6 @@ const SUPA_URL = 'https://xwleldfqlcnkliissunf.supabase.co';
 const SUPA_KEY = 'sb_publishable_KiiP5UTZlkmmwkEVwRmL8Q_6E_RDEyE';
 const supa = window.supabase ? window.supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 
-// Supabase para dados compartilhados (consultores-screener)
-const DATA_SUPA_URL = 'https://qlyceionzyuaaajwqniy.supabase.co';
-const supaData = window.supabase ? window.supabase.createClient(DATA_SUPA_URL, SUPA_KEY) : null;
-
 let currentUser = null;
 let userPlan = 'starter'; // 'starter' or 'pro'
 
@@ -948,6 +944,8 @@ async function fetchCDI(){
       const val = parseFloat(dataYtd[0].valor.replace(',','.'));
       const inp = document.getElementById('inp-cdi-ytd');
       if(inp){ inp.value = val; inp.dispatchEvent(new Event('input')); }
+      // Set for both tabs (oninput only sets activeTab)
+      states.btg.cdiYtd = val; states.xp.cdiYtd = val;
       const lbl = document.querySelector('#cdi-ytd-box .fl');
       if(lbl) lbl.innerHTML = 'CDI Acumulado Ano (%) <span style="font-size:9px;color:var(--text3)">(' + dataYtd[0].data + ')</span>';
     }
@@ -955,6 +953,8 @@ async function fetchCDI(){
       const val = parseFloat(data12m[0].valor.replace(',','.'));
       const inp = document.getElementById('inp-cdi-12m-ref');
       if(inp){ inp.value = val; inp.dispatchEvent(new Event('input')); }
+      // Set for both tabs
+      states.btg.cdi12mRef = val; states.xp.cdi12mRef = val;
       const lbl = document.querySelector('#cdi-12m-xp-box .fl');
       if(lbl) lbl.innerHTML = 'CDI Acumulado 12M (%) <span style="font-size:9px;color:var(--text3)">(' + data12m[0].data + ')</span>';
     }
@@ -971,13 +971,16 @@ function showToast(msg, cls='toast-ok', duration=3000){
   setTimeout(() => t.classList.remove('show'), duration);
 }
 
-// Salvar dados no Supabase
+// Salvar dados no Supabase via API (service role)
 async function saveToSupabase(table, funds){
-  if(!supaData) return;
   try {
-    await supaData.from(table).delete().neq('id', 0);
-    const { error } = await supaData.from(table).insert({ data: funds, uploaded_at: new Date().toISOString() });
-    if(error) throw error;
+    const res = await fetch('/api/save-funds', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table, data: funds })
+    });
+    const result = await res.json();
+    if(!res.ok) throw new Error(result.error || 'Erro ao salvar');
     showToast('☁ Dados salvos na nuvem');
   } catch(e){ console.error('Erro ao salvar no Supabase:', e); }
 }

@@ -245,21 +245,17 @@ input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;ba
 /* ════ CONTENT ════ */
 .content{flex:1;display:flex;flex-direction:column;overflow:hidden;animation:fadeInUp .3s ease .16s both}
 .statsbar{
-  min-height:64px;padding:0 16px;border-bottom:1px solid var(--border);background:var(--bg2);
-  display:flex;align-items:center;gap:0;flex-shrink:0;
+  height:56px;padding:0 16px;border-bottom:1px solid var(--border);background:var(--bg2);
+  display:flex;flex-direction:row;align-items:center;gap:0;flex-shrink:0;
   animation:fadeInUp .3s ease .08s both;
 }
-.stats-group{display:flex;align-items:center;gap:0;position:relative}
-.stats-group.cdi-group{padding-right:20px}
-.stats-group.cdi-group::after{content:'';position:absolute;right:0;top:15%;height:70%;width:1px;background:var(--border)}
-.stats-group.cdi-group .stat-v{font-size:14px;font-weight:500}
-.stats-group.cdi-group .stat-l{font-size:9px}
-.statsbar > div, .stats-group > div{position:relative;padding:0 18px;display:flex;flex-direction:column;justify-content:center}
-.stats-group > div:not(:last-child)::after{
-  content:'';position:absolute;right:0;top:20%;height:60%;width:1px;background:var(--border);
-}
-.stat-v{font-size:20px;font-weight:500;font-family:var(--mono);letter-spacing:-.5px;color:var(--text)}
-.stat-l{font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)}
+.stats-group{display:flex;flex-direction:row;align-items:center}
+.stats-group.cdi-group{width:160px;flex-shrink:0;gap:16px}
+.stats-sep{width:1px;height:32px;background:var(--border);margin:0 16px;flex-shrink:0}
+.stats-group.main-group{flex:1;display:flex;flex-direction:row;justify-content:space-around;align-items:center}
+.stats-group > div{display:flex;flex-direction:column;align-items:center}
+.stat-v{font-size:16px;font-weight:600;font-family:var(--mono);letter-spacing:-.3px;color:var(--text)}
+.stat-l{font-size:9px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#8B9AB5}
 .stat-src{font-size:8px;color:var(--text3);margin-top:1px;letter-spacing:.05em}
 .toolbar{
   padding:7px 14px;border-bottom:1px solid var(--border);
@@ -1579,7 +1575,7 @@ function renderStats(funds, tab, s){
   let cdiHtml = `<div class="stats-group cdi-group">
     <div><div class="stat-v">${cdiYtdV}</div><div class="stat-l">CDI YTD</div>${srcLabel?`<div class="stat-src">${srcLabel}</div>`:''}</div>
     <div><div class="stat-v">${cdi12mV}</div><div class="stat-l">CDI 12M</div></div>
-  </div>`;
+  </div><div class="stats-sep"></div>`;
 
   // Screener stats
   let stats = [
@@ -1606,7 +1602,7 @@ function renderStats(funds, tab, s){
     }
   }
 
-  const screenerHtml = `<div class="stats-group">` + stats.map(st =>
+  const screenerHtml = `<div class="stats-group main-group">` + stats.map(st =>
     `<div><div class="stat-v">${st.v}</div><div class="stat-l">${st.l}</div></div>`
   ).join('') + `</div>`;
 

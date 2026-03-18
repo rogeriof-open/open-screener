@@ -1432,7 +1432,7 @@ function getFiltered(tab){
   return funds.filter(f => {
     if(s.cat     && f.categoria    !== s.cat)     return false;
     if(s.subcat  && f.subcategoria !== s.subcat)  return false;
-    if(s.suit.length > 0 && !s.suit.includes(f.suitability)) return false;
+    if(tab !== 'xp' && s.suit.length > 0 && !s.suit.includes(f.suitability)) return false;
     if(s.trib) {
       if(s.trib === 'Isento') { if(!isIsentoGlobal(f)) return false; }
       else if(f.tributacao !== s.trib) return false;

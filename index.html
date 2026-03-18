@@ -568,14 +568,13 @@ tr:hover .cnpj-actions{opacity:1}
     <div class="ai-msg bot">Olá! Sou seu assistente de fundos. Posso analisar os dados carregados e ajudar com recomendações, comparações e análises. Como posso ajudar?</div>
   </div>
   <div class="ai-suggestions" id="ai-sugs">
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra classificacaoCvm = 'Renda Fixa'. XP: ordena por riscoNum crescente, prioriza riscoNum <= 5. Se não houver fundos com risco <= 5, informa isso e mostra os de menor risco disponível com aviso. BTG: suitability Conservador, ordena por ret12m decrescente. Top 5 cada.]">Melhores fundos RF para conservador</button>
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Liste os top 5 fundos de cada Classificação CVM disponível (Renda Fixa, Multimercado, Ações etc), ordenados por retorno 12M. Inclua pontos de risco para XP.]">Top 5 por categoria CVM</button>
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra fundos com Classificação CVM = Multimercado. Ordena pelos maiores índices Sharpe. Mostra nome, Sharpe, 12M%, CDI12M% e liquidez.]">Top 5 multimercado por Sharpe</button>
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Lista fundos com CDI12M > 115% em ambas as plataformas. Agrupa por Classificação CVM. Inclui liquidez e tributação.]">Fundos com CDI 12M acima de 115%</button>
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra fundos com tributação = Isento ou que contenham CRI/CRA/Infra no nome ou classificação. Compara BTG e XP. Ordena por retorno 12M.]">Fundos com isenção fiscal</button>
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[BTG: suitability Conservador ordenado por 12M decrescente. XP: Pontos de Risco até 5 (conservador), ordenado por 12M decrescente. Mostra os top 5 de cada plataforma.]">Menor risco e maior retorno</button>
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Sugere alocação para R$ 100.000 perfil conservador: propõe % em cada categoria CVM (RF, Multimercado baixa vol etc), com fundos específicos de BTG e XP, considerando liquidez mínima D+30 e tributação eficiente.]">Monte carteira para R$ 100mil conservador</button>
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra fundos de Crédito Privado/High Grade/High Yield em ambas as plataformas. Compara retorno 12M, CDI12M%, liquidez, taxa adm e risco. Aponta qual plataforma tem melhores opções.]">Compare BTG vs XP em crédito privado</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Perfil conservador. BTG: suitability=Conservador, ordena por ret12m desc, top 5. XP: riscoNum <= 5, classif CVM Renda Fixa, ordena por ret12m desc, top 5. Mostra nome, 12M%, CDI12M%, liquidez, tributação e risco.]">Top fundos conservador</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Perfil moderado. BTG: suitability=Moderado, ordena por ret12m desc, top 5. XP: riscoNum 6-25, todas classif CVM, ordena por ret12m desc, top 5.]">Top fundos moderado</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Perfil arrojado. BTG: suitability=Sofisticado, ordena por ret12m desc, top 5. XP: riscoNum > 25, ordena por ret12m desc, top 5.]">Top fundos arrojado</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Liste top 5 de cada classificacaoCvm disponível, ordenados por ret12m. Separa BTG e XP. Inclui pontos de risco para XP.]">Top 5 por categoria CVM</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[classif CVM = Multimercado. Ordena por Sharpe desc. Top 5 BTG e top 5 XP. Mostra Sharpe, 12M%, CDI12M%, liquidez.]">Top 5 multimercado por Sharpe</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra tributação = Isento ou nome contém Infra/CRI/CRA/Incentivado. Ordena por ret12m. Top 5 BTG e top 5 XP.]">Fundos com isenção fiscal</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Sugere alocação para R$100.000 perfil conservador. Propõe % por classif CVM. Fundos específicos de BTG e XP. Liquidez mínima D+30. Prioriza tributação eficiente.]">Monte carteira R$ 100mil conservador</button>
   </div>
   <div class="ai-input-row">
     <textarea class="ai-input" id="ai-input" placeholder="Pergunte sobre os fundos..." rows="1"

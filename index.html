@@ -580,20 +580,21 @@ tr:hover .cnpj-actions{opacity:1}
   <!-- Sidebar (shared, updated per tab) -->
   <div class="sidebar" id="sidebar" style="display:none">
 
-    <!-- BTG: CDI YTD box -->
-    <div class="cdi-box" id="cdi-ytd-box">
-      <span class="fl">CDI Acumulado Ano (%)</span>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:5px">Para calcular % CDI Ano</div>
-      <input class="finp" id="inp-cdi-ytd" type="number" step="0.01" placeholder="ex: 2.10"
-        oninput="st().cdiYtd=parseFloat(this.value)||null;render()">
-    </div>
-
-    <!-- XP: CDI 12M reference box -->
-    <div class="cdi-box" id="cdi-12m-xp-box" style="display:none">
-      <span class="fl" style="color:#74aeff">CDI Acumulado 12M (%)</span>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:5px">Para calcular % CDI 12M</div>
-      <input class="finp" id="inp-cdi-12m-ref" type="number" step="0.01" placeholder="ex: 13.25"
-        oninput="st().cdi12mRef=parseFloat(this.value)||null;render()">
+    <!-- CDI unificado -->
+    <div style="background:rgba(0,200,150,.05);border:1px solid rgba(0,200,150,.2);border-radius:9px;padding:8px 9px;margin-bottom:12px;">
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1">
+          <span class="fl">CDI YTD (%)</span>
+          <input class="finp" id="inp-cdi-ytd" type="number" step="0.01" placeholder="ex: 2,79"
+            oninput="states.btg.cdiYtd=states.xp.cdiYtd=parseFloat(this.value)||null;render()">
+        </div>
+        <div style="flex:1">
+          <span class="fl">CDI 12M (%)</span>
+          <input class="finp" id="inp-cdi-12m-ref" type="number" step="0.01" placeholder="ex: 14,70"
+            oninput="states.btg.cdi12mRef=states.xp.cdi12mRef=parseFloat(this.value)||null;render()">
+        </div>
+      </div>
+      <div id="cdi-data-label" style="font-size:9px;color:var(--text3);margin-top:4px;text-align:right"></div>
     </div>
 
     <div class="fs">
@@ -940,22 +941,26 @@ async function fetchCDI(){
       fetch('/api/cdi-12m')
     ]);
     const [dataYtd, data12m] = await Promise.all([resYtd.json(), res12m.json()]);
+    let lastDate = null;
     if(dataYtd && dataYtd.valor){
       const val = parseFloat(dataYtd.valor);
       const inp = document.getElementById('inp-cdi-ytd');
       if(inp){ inp.value = val; inp.dispatchEvent(new Event('input')); }
       states.btg.cdiYtd = val; states.xp.cdiYtd = val;
-      const lbl = document.querySelector('#cdi-ytd-box .fl');
-      if(lbl) lbl.innerHTML = 'CDI Acumulado Ano (%) <span style="font-size:9px;color:var(--text3)">(' + dataYtd.data + ')</span>';
+      lastDate = dataYtd.data;
     }
     if(data12m && data12m.valor){
       const val = parseFloat(data12m.valor);
       const inp = document.getElementById('inp-cdi-12m-ref');
       if(inp){ inp.value = val; inp.dispatchEvent(new Event('input')); }
       states.btg.cdi12mRef = val; states.xp.cdi12mRef = val;
-      const lbl = document.querySelector('#cdi-12m-xp-box .fl');
-      if(lbl) lbl.innerHTML = 'CDI Acumulado 12M (%) <span style="font-size:9px;color:var(--text3)">(' + data12m.data + ')</span>';
+      lastDate = data12m.data || lastDate;
     }
+    if(lastDate){
+      const lbl = document.getElementById('cdi-data-label');
+      if(lbl) lbl.textContent = 'Fonte: BACEN · ' + lastDate;
+    }
+    if(stores[activeTab].loaded) render();
   } catch(e){ console.warn('Erro ao buscar CDI do BACEN:', e); }
 }
 
@@ -1212,11 +1217,6 @@ function initSidebar(){
   const funds = store().funds;
   const isBTG = activeTab === 'btg';
   const isXP  = activeTab === 'xp';
-
-  // CDI boxes
-  document.getElementById('cdi-ytd-box').style.display       = ''; // both tabs
-  document.getElementById('cdi-12m-xp-box').style.display    = isXP  ? '' : 'none';
-  document.getElementById('cdi-ytd-box').querySelector('.fl').textContent = 'CDI Acumulado Ano (%)';
 
   // fs-cdi12 label adapts: BTG = "% CDI 12M mínimo", XP = "% CDI 12M mínimo (calculado)"
   document.getElementById('fs-cdi12').style.display = '';

@@ -62,10 +62,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   padding:0 16px;gap:14px;background:var(--bg);flex-shrink:0;position:relative;z-index:20;
   animation:fadeInUp .3s ease;
 }
-.logo{display:flex;align-items:center;gap:0;font-size:0;text-decoration:none;color:var(--text);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);flex-shrink:0}
 .logo-mark{display:none}
 .logo em{display:none}
-.logo-img{height:26px;display:block}
+.logo-img{display:none}
+.logo-area{display:flex;align-items:center;gap:8px}
+.logo-text{display:flex;flex-direction:column;line-height:1}
+.logo-name{font:600 13px var(--font);color:var(--text)}
+.logo-sub{font:400 9px var(--font);color:var(--teal);letter-spacing:.15em;text-transform:uppercase;margin-top:2px}
 .sep{width:1px;height:22px;background:var(--border)}
 
 /* Tabs in topbar */
@@ -241,16 +245,22 @@ input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;ba
 /* ════ CONTENT ════ */
 .content{flex:1;display:flex;flex-direction:column;overflow:hidden;animation:fadeInUp .3s ease .16s both}
 .statsbar{
-  height:64px;padding:0 16px;border-bottom:1px solid var(--border);background:var(--bg2);
+  min-height:64px;padding:0 16px;border-bottom:1px solid var(--border);background:var(--bg2);
   display:flex;align-items:center;gap:0;flex-shrink:0;
   animation:fadeInUp .3s ease .08s both;
 }
-.statsbar > div{position:relative;padding:0 20px;display:flex;flex-direction:column;justify-content:center}
-.statsbar > div:not(:last-child)::after{
+.stats-group{display:flex;align-items:center;gap:0;position:relative}
+.stats-group.cdi-group{padding-right:20px}
+.stats-group.cdi-group::after{content:'';position:absolute;right:0;top:15%;height:70%;width:1px;background:var(--border)}
+.stats-group.cdi-group .stat-v{font-size:14px;font-weight:500}
+.stats-group.cdi-group .stat-l{font-size:9px}
+.statsbar > div, .stats-group > div{position:relative;padding:0 18px;display:flex;flex-direction:column;justify-content:center}
+.stats-group > div:not(:last-child)::after{
   content:'';position:absolute;right:0;top:20%;height:60%;width:1px;background:var(--border);
 }
 .stat-v{font-size:20px;font-weight:500;font-family:var(--mono);letter-spacing:-.5px;color:var(--text)}
 .stat-l{font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)}
+.stat-src{font-size:8px;color:var(--text3);margin-top:1px;letter-spacing:.05em}
 .toolbar{
   padding:7px 14px;border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:8px;flex-shrink:0;
@@ -361,11 +371,11 @@ tr:last-child td{border-bottom:none}
   background:var(--bg2);border:1px solid var(--border);border-radius:14px;
   animation:fadeInUp .4s ease backwards;
 }
-.login-logo{display:flex;align-items:center;gap:0;margin-bottom:28px;justify-content:center}
-.login-logo .logo-mark{display:none}
-.login-logo .logo-img{height:30px}
-.login-logo span{display:none}
-.login-logo em{display:none}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;justify-content:center}
+.login-logo svg{flex-shrink:0}
+.login-logo .login-logo-text{display:flex;flex-direction:column;line-height:1}
+.login-logo .login-logo-name{font:700 18px var(--font);color:var(--text)}
+.login-logo .login-logo-sub{font:400 10px var(--font);color:var(--teal);letter-spacing:.15em;text-transform:uppercase;margin-top:3px}
 .login-title{font-size:15px;font-weight:600;margin-bottom:4px;text-align:center}
 .login-sub{font-size:12px;color:var(--text3);margin-bottom:24px;text-align:center}
 .login-field{margin-bottom:14px}
@@ -540,7 +550,15 @@ tr:hover .cnpj-actions{opacity:1}
 <div id="login-screen" style="display:none">
   <div class="login-box">
     <div class="login-logo">
-      <img class="logo-img" src="https://qlyceionzyuaaajwqniy.supabase.co/storage/v1/object/public/assets/logo_branco.png" alt="OpenAdvisor">
+      <svg width="36" height="36" viewBox="0 0 28 28" fill="none">
+        <path d="M14 2L24 7.5V20.5L14 26L4 20.5V7.5L14 2Z" stroke="#00C896" stroke-width="2" fill="none"/>
+        <circle cx="14" cy="14" r="4" fill="#00C896"/>
+        <path d="M14 22L14 28" stroke="#00C896" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div class="login-logo-text">
+        <span class="login-logo-name">OpenAdvisor</span>
+        <span class="login-logo-sub">Screener</span>
+      </div>
     </div>
     <div class="login-title">Acesso ao Screener</div>
     <div class="login-sub">Entre com seu email e senha para continuar</div>
@@ -562,7 +580,17 @@ tr:hover .cnpj-actions{opacity:1}
 <div id="app">
 <div class="topbar">
   <a class="logo" href="#">
-    <img class="logo-img" src="https://qlyceionzyuaaajwqniy.supabase.co/storage/v1/object/public/assets/logo_branco.png" alt="OpenAdvisor">
+    <div class="logo-area">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <path d="M14 2L24 7.5V20.5L14 26L4 20.5V7.5L14 2Z" stroke="#00C896" stroke-width="2" fill="none"/>
+        <circle cx="14" cy="14" r="4" fill="#00C896"/>
+        <path d="M14 22L14 28" stroke="#00C896" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div class="logo-text">
+        <span class="logo-name">OpenAdvisor</span>
+        <span class="logo-sub">Screener</span>
+      </div>
+    </div>
   </a>
   <div class="sep"></div>
   <div class="tabs">
@@ -601,7 +629,7 @@ tr:hover .cnpj-actions{opacity:1}
 <div id="ai-panel">
   <div class="ai-header">
     <h3>
-      <img class="ai-header-logo" src="https://qlyceionzyuaaajwqniy.supabase.co/storage/v1/object/public/assets/logo_branco.png" alt="">
+      <svg width="18" height="18" viewBox="0 0 28 28" fill="none" style="opacity:.6"><path d="M14 2L24 7.5V20.5L14 26L4 20.5V7.5L14 2Z" stroke="#00C896" stroke-width="2.5" fill="none"/><circle cx="14" cy="14" r="3.5" fill="#00C896"/></svg>
       AI Advisor <span class="ai-badge">BETA</span>
     </h3>
     <button class="ai-close" onclick="toggleAI()">✕</button>
@@ -634,12 +662,12 @@ tr:hover .cnpj-actions{opacity:1}
       <div style="display:flex;gap:8px;">
         <div style="flex:1">
           <span class="fl">CDI YTD (%)</span>
-          <input class="finp" id="inp-cdi-ytd" type="number" step="0.01" placeholder="ex: 2,79"
+          <input class="finp" id="inp-cdi-ytd" type="number" step="0.01" placeholder="—"
             oninput="states.btg.cdiYtd=states.xp.cdiYtd=parseFloat(this.value)||null;render()">
         </div>
         <div style="flex:1">
           <span class="fl">CDI 12M (%)</span>
-          <input class="finp" id="inp-cdi-12m-ref" type="number" step="0.01" placeholder="ex: 14,70"
+          <input class="finp" id="inp-cdi-12m-ref" type="number" step="0.01" placeholder="—"
             oninput="states.btg.cdi12mRef=states.xp.cdi12mRef=parseFloat(this.value)||null;render()">
         </div>
       </div>
@@ -984,6 +1012,14 @@ function isPro(){ return userPlan === 'pro' || SKIP_AUTH; }
 // CDI AUTOMÁTICO DO BACEN
 // ══════════════════════════════════════════════
 async function fetchCDI(){
+  // Show loading state
+  const inpYtd = document.getElementById('inp-cdi-ytd');
+  const inp12m = document.getElementById('inp-cdi-12m-ref');
+  const lbl = document.getElementById('cdi-data-label');
+  if(inpYtd) inpYtd.placeholder = '...';
+  if(inp12m) inp12m.placeholder = '...';
+  if(lbl) lbl.textContent = 'Buscando CDI...';
+
   try {
     const [resYtd, res12m] = await Promise.all([
       fetch('/api/cdi-ytd'),
@@ -991,26 +1027,40 @@ async function fetchCDI(){
     ]);
     const [dataYtd, data12m] = await Promise.all([resYtd.json(), res12m.json()]);
     let lastDate = null;
+    let ytdVal = null, dozeVal = null;
+
     if(dataYtd && dataYtd.valor){
-      const val = parseFloat(dataYtd.valor);
-      const inp = document.getElementById('inp-cdi-ytd');
-      if(inp){ inp.value = val; inp.dispatchEvent(new Event('input')); }
-      states.btg.cdiYtd = val; states.xp.cdiYtd = val;
+      ytdVal = parseFloat(dataYtd.valor);
+      if(inpYtd){ inpYtd.value = ytdVal; inpYtd.placeholder = '—'; inpYtd.dispatchEvent(new Event('input')); }
+      states.btg.cdiYtd = ytdVal; states.xp.cdiYtd = ytdVal;
       lastDate = dataYtd.data;
+    } else {
+      if(inpYtd) inpYtd.placeholder = 'N/D';
     }
+
     if(data12m && data12m.valor){
-      const val = parseFloat(data12m.valor);
-      const inp = document.getElementById('inp-cdi-12m-ref');
-      if(inp){ inp.value = val; inp.dispatchEvent(new Event('input')); }
-      states.btg.cdi12mRef = val; states.xp.cdi12mRef = val;
+      dozeVal = parseFloat(data12m.valor);
+      if(inp12m){ inp12m.value = dozeVal; inp12m.placeholder = '—'; inp12m.dispatchEvent(new Event('input')); }
+      states.btg.cdi12mRef = dozeVal; states.xp.cdi12mRef = dozeVal;
       lastDate = data12m.data || lastDate;
+    } else {
+      if(inp12m) inp12m.placeholder = 'N/D';
     }
+
+    console.log('[CDI]', ytdVal, dozeVal);
+
     if(lastDate){
-      const lbl = document.getElementById('cdi-data-label');
       if(lbl) lbl.textContent = 'Fonte: BACEN · ' + lastDate;
+    } else {
+      if(lbl) lbl.textContent = '';
     }
     if(stores[activeTab].loaded) render();
-  } catch(e){ console.warn('Erro ao buscar CDI do BACEN:', e); }
+  } catch(e){
+    console.warn('Erro ao buscar CDI do BACEN:', e);
+    if(inpYtd) inpYtd.placeholder = 'N/D';
+    if(inp12m) inp12m.placeholder = 'N/D';
+    if(lbl) lbl.textContent = 'CDI indisponível';
+  }
 }
 
 // Toast helper
@@ -1537,6 +1587,18 @@ function renderStats(funds, tab, s){
   const n = funds.length;
   const avg = arr => { const v = arr.filter(x => x != null); return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; };
 
+  // CDI group
+  const cdiYtdV = s.cdiYtd != null ? s.cdiYtd.toFixed(2).replace('.',',')+'%' : '—';
+  const cdi12mV = s.cdi12mRef != null ? s.cdi12mRef.toFixed(2).replace('.',',')+'%' : '—';
+  const cdiSrc = document.getElementById('cdi-data-label')?.textContent || '';
+  const srcLabel = cdiSrc.includes('BACEN') ? 'BACEN' : '';
+
+  let cdiHtml = `<div class="stats-group cdi-group">
+    <div><div class="stat-v">${cdiYtdV}</div><div class="stat-l">CDI YTD</div>${srcLabel?`<div class="stat-src">${srcLabel}</div>`:''}</div>
+    <div><div class="stat-v">${cdi12mV}</div><div class="stat-l">CDI 12M</div></div>
+  </div>`;
+
+  // Screener stats
   let stats = [
     { v: n.toLocaleString('pt-BR'), l: 'Fundos' },
     { v: fmt(avg(funds.map(f=>f.ret12m)), 2, true)+'%', l: 'Ret. Médio 12M' },
@@ -1561,9 +1623,11 @@ function renderStats(funds, tab, s){
     }
   }
 
-  document.getElementById('statsbar').innerHTML = stats.map(st =>
+  const screenerHtml = `<div class="stats-group">` + stats.map(st =>
     `<div><div class="stat-v">${st.v}</div><div class="stat-l">${st.l}</div></div>`
-  ).join('');
+  ).join('') + `</div>`;
+
+  document.getElementById('statsbar').innerHTML = cdiHtml + screenerHtml;
 }
 
 // ── TABLE ──

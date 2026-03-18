@@ -1202,7 +1202,7 @@ function parseXP(wb){
     const totalD = (cotD||0) + (liqD||0);
     // Parse risco as integer
     const riscoRaw = r[riscoCol];
-    const riscoVal = riscoRaw != null && !isNaN(parseInt(riscoRaw)) ? parseInt(riscoRaw) : null;
+    const riscoVal = riscoRaw != null && !isNaN(parseInt(riscoRaw, 10)) ? parseInt(riscoRaw, 10) : null;
     return {
       nome:       str(r[0]),
       cnpj:       str(r[1]),
@@ -1238,6 +1238,9 @@ function parseXP(wb){
 
   stores.xp.funds  = funds;
   stores.xp.loaded = true;
+  // Debug: confirm riscoNum types before save
+  const riscoSample = funds.filter(f=>f.riscoNum!=null).slice(0,5);
+  console.log('[XP Save] riscoNum samples:', riscoSample.map(f=>({nome:f.nome, riscoNum:f.riscoNum, type:typeof f.riscoNum})));
   document.getElementById('cnt-xp').textContent = funds.length.toLocaleString('pt-BR');
   activeTab = 'xp';
   document.getElementById('tab-btg').className = 'tab';

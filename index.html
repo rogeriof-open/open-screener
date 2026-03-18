@@ -568,7 +568,7 @@ tr:hover .cnpj-actions{opacity:1}
     <div class="ai-msg bot">Olá! Sou seu assistente de fundos. Posso analisar os dados carregados e ajudar com recomendações, comparações e análises. Como posso ajudar?</div>
   </div>
   <div class="ai-suggestions" id="ai-sugs">
-    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[RF = Classificação CVM 'Renda Fixa'. Conservador = suitability Conservador no BTG ou Pontos de Risco até 5 na XP. Mostrar nome, 12M%, CDI12M%, liquidez, tributação e risco.]">Melhores fundos RF para conservador</button>
+    <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra classificacaoCvm = 'Renda Fixa'. Na XP ordena por menor riscoNum. No BTG ordena por suitability Conservador. Top 5 de cada.]">Melhores fundos RF para conservador</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Liste os top 5 fundos de cada Classificação CVM disponível (Renda Fixa, Multimercado, Ações etc), ordenados por retorno 12M. Inclua pontos de risco para XP.]">Top 5 por categoria CVM</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Filtra fundos com Classificação CVM = Multimercado. Ordena pelos maiores índices Sharpe. Mostra nome, Sharpe, 12M%, CDI12M% e liquidez.]">Top 5 multimercado por Sharpe</button>
     <button class="ai-sug" onclick="aiSuggest(this)" data-ctx="[Lista fundos com CDI12M > 115% em ambas as plataformas. Agrupa por Classificação CVM. Inclui liquidez e tributação.]">Fundos com CDI 12M acima de 115%</button>
@@ -1803,19 +1803,19 @@ async function sendAI(){
   const buildContext = (funds, label) => {
     if(!funds.length) return `${label}: Não carregado`;
 
-    const catMap = {};
+    // Group by classificacaoCvm (primary) then by suitability
+    const cvmMap = {};
     funds.forEach(f => {
-      const cat = f.categoria || 'Outros';
-      if(!catMap[cat]) catMap[cat] = [];
-      catMap[cat].push(f);
+      const cvm = f.classificacaoCvm || f.categoria || 'Outros';
+      if(!cvmMap[cvm]) cvmMap[cvm] = [];
+      cvmMap[cvm].push(f);
     });
 
     let ctx = `${label} (${funds.length} fundos total)\n`;
 
-    Object.entries(catMap).sort((a,b)=>b[1].length-a[1].length).forEach(([cat, cfunds]) => {
-      ctx += `\n== ${cat} (${cfunds.length} fundos) ==\n`;
+    Object.entries(cvmMap).sort((a,b)=>b[1].length-a[1].length).forEach(([cvm, cfunds]) => {
+      ctx += `\n== ClassificacaoCVM: ${cvm} (${cfunds.length} fundos) ==\n`;
 
-      // Group by suitability within category
       const suitMap = {};
       cfunds.forEach(f => {
         const s = f.suitability || 'Geral';
@@ -1824,10 +1824,10 @@ async function sendAI(){
       });
 
       Object.entries(suitMap).forEach(([suit, sfunds]) => {
-        const top = [...sfunds].filter(f=>f.ret12m!=null).sort((a,b)=>b.ret12m-a.ret12m).slice(0,3);
+        const top = [...sfunds].filter(f=>f.ret12m!=null).sort((a,b)=>b.ret12m-a.ret12m).slice(0,5);
         ctx += `  [${suit} — ${sfunds.length} fundos]\n`;
         top.forEach(f => {
-          ctx += `    • ${f.nome} | 12M:${f.ret12m?.toFixed(2)}% | CDI12M:${f.cdi12m!=null?f.cdi12m.toFixed(0)+'%':'—'} | Liq:${f.liquidezStr||'—'} | Trib:${f.tributacao||'—'} | TxAdm:${f.txAdm?.toFixed(2)||'—'}%${f.classificacaoCvm?' | CVM:'+f.classificacaoCvm:''}${f.riscoNum!=null?' | Risco:'+f.riscoNum+' pts':''}\n`;
+          ctx += `    • ${f.nome} | Cat:${f.categoria||'—'} | 12M:${f.ret12m?.toFixed(2)}% | CDI12M:${f.cdi12m!=null?f.cdi12m.toFixed(0)+'%':'—'} | Liq:${f.liquidezStr||'—'} | Trib:${f.tributacao||'—'} | TxAdm:${f.txAdm?.toFixed(2)||'—'}%${f.riscoNum!=null?' | Risco:'+f.riscoNum+' pts':''}\n`;
         });
       });
     });
@@ -1857,6 +1857,11 @@ Quando o usuário mencionar perfil, use OBRIGATORIAMENTE os fundos com o suitabi
 - "sofisticado" / "arrojado" → suitability: Sofisticado ou Profissional
 - "qualificado" → suitability: Qualificado, Sofisticado ou Profissional
 Se não houver fundos com o suitability correto nos dados, diga isso claramente.
+
+REGRA CRÍTICA — CLASSIFICAÇÃO CVM:
+Quando o usuário mencionar RF, Renda Fixa ou quiser fundos de renda fixa, filtre EXCLUSIVAMENTE por classificacaoCvm = 'Renda Fixa'.
+Ignore categorias internas como 'Crédito Liquidez', 'High Grade', 'Crédito Estruturado' etc para determinar se é renda fixa — use APENAS o campo classificacaoCvm.
+O mesmo vale para Multimercado, Ações, Cambial etc: sempre use classificacaoCvm como filtro primário.
 
 ${buildContext(btgFunds, 'BTG PACTUAL')}
 

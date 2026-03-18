@@ -1793,11 +1793,34 @@ async function sendAI(){
   const thinkId = 'think-' + Date.now();
   addAIMsg('Analisando os dados...', 'bot thinking', thinkId);
 
-  // Build context summary from loaded funds
-  const btgFunds = stores.btg.loaded ? stores.btg.funds : [];
-  const xpFunds  = stores.xp.loaded  ? stores.xp.funds  : [];
+  // Build context from FILTERED funds (respects sidebar filters)
+  const btgFunds = stores.btg.loaded ? getFiltered('btg') : [];
+  const xpFunds  = stores.xp.loaded  ? getFiltered('xp')  : [];
+  const btgTotal = stores.btg.loaded ? stores.btg.funds.length : 0;
+  const xpTotal  = stores.xp.loaded  ? stores.xp.funds.length  : 0;
 
-  // Build rich context: stats + top funds per category
+  // Describe active filters for the AI
+  const describeFilters = (tab) => {
+    const s = states[tab];
+    const parts = [];
+    if(s.cat)           parts.push('Categoria: '+s.cat);
+    if(s.subcat)        parts.push('Subcategoria: '+s.subcat);
+    if(s.suit.length)   parts.push('Suitability: '+s.suit.join(', '));
+    if(s.trib)          parts.push('Tributação: '+s.trib);
+    if(s.captacao)      parts.push('Captação: '+s.captacao);
+    if(s.maxLiq < 366)  parts.push('Liquidez máx: D+'+s.maxLiq);
+    if(s.r12Min!=null)  parts.push('Ret 12M mín: '+s.r12Min+'%');
+    if(s.r12Max!=null)  parts.push('Ret 12M máx: '+s.r12Max+'%');
+    if(s.cdi12Min!=null) parts.push('CDI 12M mín: '+s.cdi12Min+'%');
+    if(s.volMax!=null)  parts.push('Vol máx: '+s.volMax+'%');
+    if(s.sharpeMin!=null) parts.push('Sharpe mín: '+s.sharpeMin);
+    if(s.apMinMax!=null) parts.push('Apl mín máx: R$'+s.apMinMax);
+    if(s.riscoMax!=null) parts.push('Risco máx: '+s.riscoMax+' pts');
+    if(s.topOnly)       parts.push('Apenas Top Funds');
+    if(s.search)        parts.push('Busca: "'+s.search+'"');
+    return parts.length ? parts.join(' | ') : 'Nenhum filtro ativo';
+  };
+
   const filtered = getFiltered(activeTab);
   const buildContext = (funds, label) => {
     if(!funds.length) return `${label}: Não carregado`;
@@ -1810,7 +1833,7 @@ async function sendAI(){
       cvmMap[cvm].push(f);
     });
 
-    let ctx = `${label} (${funds.length} fundos total)\n`;
+    let ctx = `${label} (${funds.length} fundos após filtros)\n`;
 
     Object.entries(cvmMap).sort((a,b)=>b[1].length-a[1].length).forEach(([cvm, cfunds]) => {
       ctx += `\n== ClassificacaoCVM: ${cvm} (${cfunds.length} fundos) ==\n`;
@@ -1833,12 +1856,6 @@ async function sendAI(){
     return ctx;
   };
 
-  const filteredCtx = (() => {
-    if(!filtered.length) return 'Nenhum fundo filtrado.';
-    const top = [...filtered].filter(f=>f.ret12m!=null).sort((a,b)=>b.ret12m-a.ret12m).slice(0,15);
-    return `${filtered.length} fundos filtrados. Top por 12M:\n` +
-      top.map(f=>`  • ${f.nome} (${f.categoria}) | 12M:${f.ret12m?.toFixed(2)}% | Liq:${f.liquidezStr||'—'} | Suit:${f.suitability||'—'}`).join('\n');
-  })();
 
   const systemPrompt = `Você é um assistente especialista em fundos de investimento para assessores de investimentos brasileiros.
 Você tem acesso aos dados REAIS e COMPLETOS das plataformas BTG Pactual e XP Investimentos carregados pelo usuário.
@@ -1866,15 +1883,17 @@ REGRA CRÍTICA — PONTOS DE RISCO XP:
 Escala de risco XP: Conservador = até 5 pts, Moderado = 6-25 pts, Agressivo = acima de 25 pts.
 NUNCA recomendar como conservador fundos com riscoNum > 5 sem aviso explícito.
 
+FILTROS ATIVOS BTG: ${describeFilters('btg')} (${btgFunds.length} de ${btgTotal} fundos)
+FILTROS ATIVOS XP: ${describeFilters('xp')} (${xpFunds.length} de ${xpTotal} fundos)
+
 ${buildContext(btgFunds, 'BTG PACTUAL')}
 
 ${buildContext(xpFunds, 'XP INVESTIMENTOS')}
 
-FUNDOS ATUALMENTE FILTRADOS NA TELA (aba ${activeTab.toUpperCase()}):
-${filteredCtx}
+ABA ATIVA: ${activeTab.toUpperCase()} (${filtered.length} fundos visíveis na tabela)
 
 INSTRUÇÕES:
-- Responda sempre com base nos dados reais acima
+- Responda APENAS com base nos fundos filtrados acima (que o usuário está vendo na tela)
 - Ao recomendar fundos, cite nome, retorno 12M, CDI 12M, liquidez e suitability
 - SEMPRE verifique se o suitability do fundo é adequado ao perfil perguntado
 - Seja objetivo e prático como um consultor sênior

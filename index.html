@@ -1828,6 +1828,13 @@ async function sendAI(){
   const xpFunds  = stores.xp.loaded  ? stores.xp.funds  : [];
   const isXPLabel = (label) => label.includes('XP');
 
+  // Infer tax-exempt status from fund name/category
+  const _isentoRx = /incentiva|debenture|debênture|infra|[\b\s]cri[\b\s]|[\b\s]cra[\b\s]|[\b\s]lci[\b\s]|[\b\s]lca[\b\s]|fundimob|imobili[aá]rio|fiagro/i;
+  const isIsento = (f) => {
+    const txt = (f.nome||'') + ' ' + (f.categoria||'') + ' ' + (f.subcategoria||'');
+    return _isentoRx.test(txt);
+  };
+
   // Classify XP funds by riscoNum thresholds
   const riscoProfile = (f) => {
     const r = f.riscoNum;
@@ -1869,15 +1876,14 @@ async function sendAI(){
         const top = [...gfunds].filter(f=>f.ret12m!=null).sort((a,b)=>b.ret12m-a.ret12m).slice(0,5);
         ctx += `  [${group} — ${gfunds.length} fundos]\n`;
         top.forEach(f => {
-          const trib = f.tributacao || '';
-          const isento = trib.toLowerCase().includes('isento');
-          const tribLabel = isento ? 'Isento ✅' : trib.includes('Longo') ? 'LP' : trib.includes('Curto') ? 'CP' : (trib||'—');
+          const exempt = isIsento(f);
           const ret = f.ret12m?.toFixed(2);
-          const retGross = isento && f.ret12m != null ? ' (≈'+(f.ret12m/0.85).toFixed(2)+'% gross)' : '';
+          const retGross = exempt && f.ret12m != null ? ' (≈'+(f.ret12m/0.85).toFixed(2)+'% gross)' : '';
           const cdi = f.cdi12m != null ? f.cdi12m.toFixed(0)+'%' : '—';
-          const cdiGross = isento && f.cdi12m != null ? ' (≈'+(f.cdi12m/0.85).toFixed(0)+'% gross)' : '';
-          const risco = xp ? (f.riscoNum!=null ? ' | Risco: '+f.riscoNum+' pts' : '') : ' | Perfil: '+(f.suitability||'—');
-          ctx += `    • ${f.nome} | 12M: ${ret}%${retGross} | CDI12M: ${cdi}${cdiGross} | Liq: ${f.liquidezStr||'—'}${risco} | Trib: ${tribLabel}\n`;
+          const cdiGross = exempt && f.cdi12m != null ? ' (≈'+(f.cdi12m/0.85).toFixed(0)+'% gross)' : '';
+          const risco = xp ? (f.riscoNum!=null ? ' | Risco: '+f.riscoNum+' pts' : '') : ' | Suitability: '+(f.suitability||'—');
+          const tribPart = exempt ? ' | Trib: Isento ✅' : '';
+          ctx += `    • ${f.nome} | 12M: ${ret}%${retGross} | CDI12M: ${cdi}${cdiGross} | Liq: ${f.liquidezStr||'—'}${risco}${tribPart}\n`;
         });
       });
     });
